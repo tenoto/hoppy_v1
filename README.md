@@ -5,14 +5,20 @@ This package includes libararies and scripts for X-ray analyses of High-energy O
 
 ```
 hoppy
-|
-|
-|__ hoppy
-|     |__ somePython.py
-|     |__ __init__.py
-|
-|__ tests
-      |__ test.py
+├── LICENSE
+├── MANIFEST.in
+├── README.md
+├── dist
+├── hoppy
+│   ├── general
+│   │   └── __init__.py
+│   ├── nicer
+│   │   └── __init__.py
+│   ├── plot
+│   │   └── __init__.py
+│   └── swift
+│       └── __init__.py
+└── setup.py
 ```
 
 ## Reference
