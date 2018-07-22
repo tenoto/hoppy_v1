@@ -1,0 +1,13 @@
+MANIFEST.in
+README.md
+setup.py
+hoppy/__init__.py
+hoppy.egg-info/PKG-INFO
+hoppy.egg-info/SOURCES.txt
+hoppy.egg-info/dependency_links.txt
+hoppy.egg-info/requires.txt
+hoppy.egg-info/top_level.txt
+hoppy/general/__init__.py
+hoppy/general/hello.py
+hoppy/nicer/__init__.py
+hoppy/swift/__init__.py
