@@ -16,4 +16,4 @@ hoppy
 ```
 
 ## Reference
-- Python package lesson https://github.com/BillMills/pythonPackageLesson
+- Python package lesson https://github.com/BillMills/pythonPackageLesson (see demo python package)
