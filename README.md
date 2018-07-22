@@ -14,3 +14,6 @@ hoppy
 |__ tests
       |__ test.py
 ```
+
+## Reference
+- Python package lesson https://github.com/BillMills/pythonPackageLesson
