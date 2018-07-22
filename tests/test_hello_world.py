@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import sys
-sys.path.append('.')
+#import sys
+#sys.path.append('.')
 
 #import hoppy 
 #from hoppy.general import hello
