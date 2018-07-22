@@ -1,16 +1,13 @@
 # hoppy (High-energy Observatory Pipelines of PYthon)
-This package includes High-energy Observatory Pipelines of PYthon (HOPPY) for X-ray analyses of Swift, NICER, and NuSTAR.
-
-## Scope of this package
+This package includes libararies and scripts for X-ray analyses of High-energy Observatory Pipelines of PYthon (HOPPY). 
 
 ## Structure
 
 ```
-project
+hoppy
 |
 |
-|__ myPackage
-|     |
+|__ hoppy
 |     |__ somePython.py
 |     |__ __init__.py
 |
