@@ -2,15 +2,29 @@
 
 import os 
 import sys 
+import yaml 
 import argparse 
+import numpy as np
 import astropy.io.fits as pyfits 
+
+def string_to_list(string):
+	mainlist = []
+	for col in string.split(','):
+		sublist = []
+		for i in col.split('-'):
+			sublist.append(float(i))
+		mainlist.append(sublist)
+	return mainlist
 
 class XspecPha():
 	def __init__(self,phafile,outdir='out',
 		backgrnd=None,rmffile=None,arffile=None,modelxcm=None,
 		binminsig=5,binmaxbin=50,fitemin=0.4,fitemax=10.0,
 		plotxmin=0.4,plotxmax=10.0,plotymin=1e-4,plotymax=1e+4,
-		ploty2min=-10.0,ploty2max=10.0):
+		ploty2min=-10.0,ploty2max=10.0,
+		ratebands=[[0.4,6.0],[1.0,10.0]],
+		fluxbands=[[0.4,6.0],[1.0,10.0]],
+		parerrnum=[1,2,5]):
 		self.phafile = phafile
 		self.outdir = outdir 
 		self.backgrnd = backgrnd
@@ -27,6 +41,9 @@ class XspecPha():
 		self.plotymax = plotymax 
 		self.ploty2min = ploty2min
 		self.ploty2max = ploty2max
+		self.ratebands = ratebands
+		self.fluxbands = fluxbands
+		self.parerrnum = parerrnum
 
 		if not os.path.exists(self.phafile):
 			sys.stderr.write('phafile %s does not exist.' % self.phafile)
@@ -62,6 +79,44 @@ class XspecPha():
 		for key, value in vars(self).iteritems(): # python 2 
 			if not key in ["hdu_pha","header"]:
 				print(key,value)
+
+	def get_rate_and_error(self,emin,emax):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		tmp_log = '%s/tmp_rate_%sto%skeV.log' % (self.outdir,
+			str(emin).replace('.','p'),str(emax).replace('.','p'))
+		cmd = 'rm -f %s' % tmp_log
+		print(cmd);os.system(cmd)
+
+		cmd  = 'xspec<<EOF\n'
+		cmd += 'setplot device tmp/null\n'		
+		cmd += 'data 1 %s\n' % self.phafile
+		if self.backgrnd is not None:
+			cmd += 'back 1 %s\n' % self.backgrnd
+		cmd += 'setplot energy\n'
+		cmd += 'ignore 1:**-%0.3f %0.3f-**\n' % (emin,emax)
+		cmd += 'log %s\n' % tmp_log
+		cmd += 'show rate\n'
+		cmd += 'log none\n'
+		cmd += 'exit\n'
+		cmd += 'EOF\n'
+		print(cmd);os.system(cmd)
+
+		rate = grep(tmp_log,"#Net count rate",6)[-1]
+		rate_error = grep(tmp_log,"#Net count rate",8)[-1]
+	
+		#cmd = 'rm -f %s' % tmp_log
+		print(cmd);os.system(cmd)	
+
+		outlist = [rate, rate_error]
+		return outlist 
+
+	def get_rate_list(self):
+		self.ratelist = []
+		for i in range(len(self.ratebands)):
+			emin = self.ratebands[i][0]
+			emax = self.ratebands[i][1]
+			self.ratelist.append(self.get_rate_and_error(emin,emax))
 
 	def bin_spec(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -142,16 +197,18 @@ class XspecPha():
 		self.fxcm_fit = '%s/%s_fit.xcm' % (self.outdir,self.basename)		
 		self.flog_fit = '%s/%s_fit.log' % (self.outdir,self.basename)				
 
-		self.title = '%s %s/%s %s' % (self.OBJECT,
-			self.TELESCOP,self.INSTRUME, self.OBSID)
-		self.subtitle = '%s' % (self.DATEOBS)
+		self.title = '%s %s/%s %s %s (%.1f s)' % (self.OBJECT,
+			self.TELESCOP,self.INSTRUME, self.OBSID,
+			self.DATEOBS,self.EXPOSURE)
+		self.subtitle = '%s' % (os.path.basename(self.phafile))
 
 		cmd  = 'xspec<<EOF\n'
 		cmd += '@%s\n' % self.readxcm 
+		cmd += 'renorm \n'
 		cmd += 'query yes\n'	
 		cmd += 'fit\n'		
 		cmd += 'log %s\n' % self.flog_fit 
-		cmd += 'save all %s\n' % self.fxcm_fit				
+		cmd += 'save all %s\n' % self.fxcm_fit						
 		cmd += 'show rate\n'
 		cmd += 'show pa\n'		
 		cmd += 'show fit\n'	
@@ -173,13 +230,182 @@ class XspecPha():
 		cmd = 'ps2pdf.py %s' % self.fps_fit
 		print(cmd);os.system(cmd)
 
+	def get_flux(self,fitxcm,emin,emax):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		tmp_log = '%s/tmp_flux_%sto%skeV.log' % (self.outdir,
+			str(emin).replace('.','p'),str(emax).replace('.','p'))
+		cmd = 'rm -f %s' % tmp_log
+		print(cmd);os.system(cmd)
+
+		cmd  = 'xspec<<EOF\n'
+		cmd += '@%s\n' % self.fxcm_fit
+		cmd += 'fit\n'
+		cmd += 'log %s\n' % tmp_log
+		cmd += 'flux %.3f %.3f err 300,68.3\n' % (emin,emax)
+		cmd += 'log none\n'
+		cmd += 'exit\n'
+		print(cmd);os.system(cmd)
+
+		for line in open(tmp_log):
+			cols = line.split()
+			if "# Model Flux" in line:
+				flux = float(cols[5].replace('(',''))
+			if "Error range" in line:
+				flux_min = float(cols[6].replace('(',''))
+				flux_max = float(cols[8].replace(')',''))				
+		flux_error_min = flux - flux_min
+		flux_error_max = flux_max - flux
+		outlist = [flux,flux_error_min,flux_error_max]
+		return outlist 
+
+	def get_flux_list(self):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		self.fluxlist = []
+		for i in range(len(self.fluxbands)):
+			emin = self.fluxbands[i][0]
+			emax = self.fluxbands[i][1]
+			self.fluxlist.append(self.get_flux(self.fxcm_fit,emin,emax))
+
+	def get_parerror(self,fitxcm,parnum):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		tmp_log = '%s/tmp_par%d.log' % (self.outdir,parnum)
+		cmd = 'rm -f %s' % tmp_log
+		print(cmd);os.system(cmd)
+
+		cmd  = 'xspec<<EOF\n'
+		cmd += '@%s\n' % self.fxcm_fit
+		cmd += 'fit\n'
+		cmd += 'log %s\n' % tmp_log
+		cmd += 'error 1.0 %d\n' % parnum
+		cmd += 'log none\n'
+		cmd += 'exit\n'
+		print(cmd);os.system(cmd)
+
+		flag_show_pa = False
+		for line in open(self.flog_fit):
+			cols = line.split()
+			if flag_show_pa and len(cols) > 1:
+				if cols[1] == str(parnum):
+					value = float(cols[-3])
+					break
+			if "#Parameters defined:" in line:
+				flag_show_pa = True
+		if not flag_show_pa:
+			value = np.nan				
+
+		flag_err = False
+		for line in open(tmp_log):
+			cols = line.split()
+			if flag_err and len(cols) == 5:
+				if cols[1] == str(parnum) and cols[4][0] == '(' and cols[4][-1] == ')':
+					print(line)
+					tmp1,tmp2 = cols[4].split(',')
+					err_min = float(tmp1.replace('(',''))
+					err_max = float(tmp2.replace(')',''))
+					break
+			if "# Parameter   Confidence Range (1)" in line:
+				flag_err = True
+		if not flag_err:
+			err_min = np.nan
+			err_max = np.nan
+	
+		outlist = [value,err_min,err_max]
+		return outlist 		
+
+	def get_parerror_list(self):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		self.parerrorlist = []
+		for parnum in self.parerrnum:
+			self.parerrorlist.append(self.get_parerror(self.fxcm_fit,parnum))
+
+	def dump_yamlfile(self):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		param = {}
+		for key, value in vars(self).iteritems(): # python 2 
+			if not key in ["hdu_pha","header","fitlog"]:
+				param[key] = value 
+				print(key,value)
+	
+		self.fyaml_dump = '%s/%s.yaml' % (self.outdir,self.basename)
+		with open(self.fyaml_dump, "w") as wf:
+		    yaml.dump(param, wf,default_flow_style=False)		
+
+	def analyze_fitlog(self):
+		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
+
+		self.fitlog = XspecFitLog(self.flog_fit)		
+		self.chisquare = self.fitlog.get_chisquare()
+		self.reduced_chisquare = self.fitlog.get_reduced_chisquare()
+		self.dof = self.fitlog.get_dof()
+		self.probability = self.fitlog.get_probability()
+
+		print(self.chisquare)
+		print(self.reduced_chisquare)
+		print(self.dof)
+		print(self.probability)
+
 	def run(self):
 		self.get_phafile_property()
+		self.get_rate_list()
 		self.bin_spec()
 		self.show_property()
 		self.prepare_read_xcm()
 		self.make_template_pcofile()
 		self.fit_spectrum()
+		self.analyze_fitlog()
+		self.get_flux_list()
+		self.get_parerror_list()
+		self.dump_yamlfile()
+
+def grep(logfile,keyword,colnum,dtype=float):
+	out_word_list = []
+	for line in open(logfile):
+		if keyword in line:
+			cols = line.split()
+			if dtype == float:
+				out_word_list.append(float(cols[colnum]))
+			elif dtype == int:
+				out_word_list.append(int(cols[colnum]))				
+	return out_word_list
+
+class XspecFitLog():
+	def __init__(self, logfile):
+		self.logfile = logfile
+		if not os.path.exists(self.logfile):
+			print "file does not exits: %s" % self.logfile
+			quit()
+
+	def get_chisquare(self):
+		self.chisquare = grep(self.logfile,"#Test statistic : Chi-Squared =",5)[-1]
+		return self.chisquare
+
+	def get_reduced_chisquare(self):
+		self.reduced_chisquare = grep(self.logfile,"# Reduced chi-squared =",4)[-1]
+		return self.reduced_chisquare
+
+	def get_dof(self):
+		self.dof = grep(self.logfile,"# Reduced chi-squared =",6,dtype=int)[-1]
+		return self.dof		
+
+	def get_probability(self):
+		self.probability = grep(self.logfile,"# Null hypothesis probability =",5)[-1]
+		return self.probability		
+
+
+
+	#def get_fitrange_rate(logfile):
+	#	for line in open(logfile):
+	#		cols = line.split()
+	#		if "#Net count rate" in line:
+	#			rate = float(cols[6])
+	#			rate_err = float(cols[8])
+	#			break
+	#	return rate, rate_err			
 
 if __name__=="__main__":
 
@@ -221,14 +447,39 @@ if __name__=="__main__":
 		help='fitting energy min (keV).') 								
 	parser.add_argument(
 		'--fitemax',metavar='fitemax',type=float,default=10.0,
-		help='fitting energy max (keV).') 									
+		help='fitting energy max (keV).') 	
+	parser.add_argument(
+		'--ratebands',metavar='ratebands',type=str,default=[[0.4,6.0],[1.0,10.0]],
+		help='rate energy bands (list) example:0.8-6.0,2.0-10.0 .') 											
+	parser.add_argument(
+		'--fluxbands',metavar='fluxbands',type=str,default=[[0.4,6.0],[1.0,10.0]],
+		help='flux energy bands (list) example:0.8-6.0,2.0-10.0 .') 	
+	parser.add_argument(
+		'--parerrnum',metavar='parerrnum',type=str,default=[1,2,5],
+		help='parameter error number list.') 														
 	args = parser.parse_args()	
 	print(args)
+
+	if type(args.ratebands) == list:
+		ratebands = args.ratebands
+	elif type(args.ratebands) == str:
+		ratebands = string_to_list(args.ratebands)
+
+	if type(args.fluxbands) == list:
+		fluxbands = args.fluxbands
+	elif type(args.fluxbands) == str:
+		fluxbands = string_to_list(args.fluxbands)		
+
+	if type(args.parerrnum) == list:
+		parerrnum = args.parerrnum
+	elif type(args.fluxbands) == str:
+		parerrnum = string_to_list(args.parerrnum)	
 
 	xspec_pha = XspecPha(args.phafile,
 		outdir=args.outdir,
 		backgrnd=args.backgrnd,rmffile=args.rmffile,arffile=args.arffile,modelxcm=args.modelxcm,
-		binminsig=args.binminsig,binmaxbin=args.binmaxbin,fitemin=args.fitemin,fitemax=args.fitemax)
+		binminsig=args.binminsig,binmaxbin=args.binmaxbin,fitemin=args.fitemin,fitemax=args.fitemax,
+		ratebands=ratebands,fluxbands=fluxbands,parerrnum=parerrnum)
 	xspec_pha.run()
 
 
