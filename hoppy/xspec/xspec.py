@@ -48,6 +48,9 @@ class XspecPha():
 		if not os.path.exists(self.phafile):
 			sys.stderr.write('phafile %s does not exist.' % self.phafile)
 			exit()
+		if os.path.exists(self.outdir):
+			sys.stderr.write('output directory %s has already existed.' % self.outdir)
+			quit()
 		if not os.path.exists(self.outdir):
 			cmd = 'mkdir -p %s' % self.outdir
 			print(cmd);os.system(cmd)

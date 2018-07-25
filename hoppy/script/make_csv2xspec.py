@@ -32,17 +32,12 @@ class CSVtoXSPEC():
 		df["plotxmin"] = [self.param["plotxmin"] for i in range(len(df))]								
 		df["plotxmax"] = [self.param["plotxmax"] for i in range(len(df))]										
 		df["plotymin"] = [self.param["plotymin"] for i in range(len(df))]												
+		df["plotymax"] = [self.param["plotymax"] for i in range(len(df))]														
+		df["ploty2min"] = [self.param["ploty2min"] for i in range(len(df))]																
+		df["ploty2max"] = [self.param["ploty2max"] for i in range(len(df))]																		
 		print(df)
 
-		"""
-		csvfile = '%s/%s.csv' % (param['outdir'],param['outdir'].replace('/','_'))
-COLUMNS = ['data_id','src_pha','bgd_pha','rmffile','arffile',
-	'model_xcm','bin_minsig','bin_maxbin','fit_emin','fit_emax','param_fit','param_fix_for_flux',
-	'bgdmodel_err_qdp'
-	]
-df_out = pd.DataFrame(csv_data_list,columns=COLUMNS)
-df_out.to_csv(csvfile)
-		"""
+		df.to_csv(outcsvfile)
 
 if __name__=="__main__":
 
@@ -50,7 +45,7 @@ if __name__=="__main__":
 
 	parser = argparse.ArgumentParser(
 		prog=__file__,
-		usage='python %s filelist yamlfile outcsvfile',
+		usage='python %s filelist yamlfile outcsvfile' % __file__,
 		description='prepare csvfile for xspec fittings',
 		epilog='',
 		add_help=True,
