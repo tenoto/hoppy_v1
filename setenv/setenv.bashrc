@@ -13,7 +13,19 @@ else
 fi
 
 export PATH=$HOPPY_PATH/hoppy/script:$PATH
+export PYTHONPATH=$HOPPY_PATH:$PYTHONPA
 
 echo ComputerName    = $NAME
 echo HOPPY_PATH = $HOPPY_PATH
-export PYTHONPATH=$HOPPY_PATH:$PYTHONPATH
+
+################
+#     NICER    # 
+################  
+export PATH=$HOPPY_PATH/hoppy/nicer:$PATH
+export NICER_BGD_MODEL_VERSION="BGMod_3C50"
+export NICER_BGD_LIBRARY_PATH="/Users/enoto/Dropbox/enoto/research/nicer/data/mitbgd/"$NICER_BGD_MODEL_VERSION
+export NICER_RESP_PATH="/Users/enoto/work/niresp"
+
+echo NICER_BGD_MODEL_VERSION=$NICER_BGD_MODEL_VERSION
+echo NICER_BGD_LIBRARY_PATH=$NICER_BGD_LIBRARY_PATH
+echo NICER_RESP_PATH=$NICER_RESP_PATH
