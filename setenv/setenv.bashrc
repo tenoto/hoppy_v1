@@ -7,7 +7,8 @@ elif [ $NAME = 'nebula' ]; then
 	echo '...setting for machine of "nebula"'
 	export HOPPY_PATH="/Users/enoto/work/drbv1/soft/git/hoppy"	
 elif [ $NAME = 'llama' ]; then
-	echo '...setting for machine of "fireant"'
+	echo '...setting for machine of "llama"'
+	export HOPPY_PATH="/Users/enoto/work/soft/hoppy"		
 else
 	echo 'no corresponding computer setup.'
 fi
@@ -17,6 +18,8 @@ export PYTHONPATH=$HOPPY_PATH:$PYTHONPA
 
 echo ComputerName    = $NAME
 echo HOPPY_PATH = $HOPPY_PATH
+
+alias hoppyinit="source $HOPPY_PATH/setenv/setenv.bashrc"
 
 ################
 #     NICER    # 

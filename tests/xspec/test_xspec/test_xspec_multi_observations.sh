@@ -1,15 +1,15 @@
 #!/bin/sh -f 
 
-rm -rf out_multi; mkdir out_multi
+rm -rf out/multi; mkdir out/multi
 
-python ../../../hoppy/script/make_csv2xspec.py \
+$HOPPY_PATH/hoppy/script/make_csv2xspec.py \
 	data/filelist2csv.txt \
 	data/xspec_multifit_param.yaml \
-	out_multi/xspec_multifit.csv
+	out/multi/xspec_multifit.csv
 
-#python ../../../hoppy/xspec/xspec_multi_observations.py \
-#	data/filelist2csv.txt \
-#	data/xspec_multifit_param.yaml 
+$HOPPY_PATH/hoppy/xspec/xspec_multi_observations.py \
+	out/multi/xspec_multifit.csv \
+	data/xspec_multifit_param.yaml 
 
 
 

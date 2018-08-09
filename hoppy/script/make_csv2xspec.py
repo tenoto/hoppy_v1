@@ -37,6 +37,11 @@ class CSVtoXSPEC():
 		df["ploty2max"] = [self.param["ploty2max"] for i in range(len(df))]																		
 		print(df)
 
+		outdir = os.path.dirname(outcsvfile)
+		if not os.path.exists(outdir):
+			cmd = 'mkdir -p %s' % outdir
+			print(cmd);os.system(cmd)
+
 		df.to_csv(outcsvfile)
 
 if __name__=="__main__":

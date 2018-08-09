@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import os 
@@ -23,6 +24,7 @@ class MonitoringManager():
 		print("yamlfile: %s" % self.yamlfile)
 
 		self.df    = pd.read_csv(self.csvfile)
+		self.df = self.df.drop(columns='Unnamed: 0')
 		self.param = yaml.load(open(self.yamlfile))
 
 		self.outcsvfile = '%s/%s' % (
@@ -31,7 +33,8 @@ class MonitoringManager():
 		print("out csvfile: %s" % self.outcsvfile)
 
 	def run(self):		
-		add_column_names = ["OBSID","DATEOBS","DATEEND","EXPOSURE",
+		add_column_names = ["grp_pha","OBSID","DATEOBS","DATEEND","EXPOSURE",
+			"MJD_DATEOBS","MJD_DATEEND",
 			"OBJECT","TELESCOP","INSTRUME","MJDOBS","TSTART","TSTOP",
 			"fxcm_fit","title",
 			"chisquare","reduced_chisquare","dof","probability"]

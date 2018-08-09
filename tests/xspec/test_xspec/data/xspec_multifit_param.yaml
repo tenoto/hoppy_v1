@@ -1,4 +1,4 @@
-outdir: 'out_multifit'
+outdir: 'out/multi'
 modelxcm: 'data/phabs_pegpwrlw.xcm'
 binminsig: 5 
 binmaxbin: 50

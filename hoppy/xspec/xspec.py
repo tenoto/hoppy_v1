@@ -6,6 +6,7 @@ import yaml
 import argparse 
 import numpy as np
 import astropy.io.fits as pyfits 
+import astropy.time as asttime 
 
 def string_to_list(string):
 	mainlist = []
@@ -73,7 +74,10 @@ class XspecPha():
 		self.INSTRUME = self.header['INSTRUME']		
 		self.MJDOBS = self.header['MJD-OBS']
 		self.TSTART = self.header['TSTART']
-		self.TSTOP = self.header['TSTOP']		
+		self.TSTOP = self.header['TSTOP']	
+
+		self.MJD_DATEOBS = asttime.Time(self.DATEOBS,format='isot', scale='utc').mjd	
+		self.MJD_DATEEND = asttime.Time(self.DATEEND,format='isot', scale='utc').mjd
 
 	def show_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -154,7 +158,8 @@ class XspecPha():
 		cmd  = 'mv %s %s %s; rm -f %s' % (grp_qdp,grp_pha,self.outdir,grp_pco)
 		print(cmd);os.system(cmd)
 
-		self.phafile = '%s/%s' % (self.outdir,grp_pha)
+		self.grp_pha = '%s/%s' % (self.outdir,grp_pha)
+		self.phafile = self.grp_pha
 
 	def prepare_read_xcm(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
