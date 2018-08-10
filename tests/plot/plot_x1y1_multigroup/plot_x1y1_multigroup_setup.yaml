@@ -1,0 +1,29 @@
+#####################
+# General
+#####################
+outpdf : './out/plot_x1y1_multigroup.pdf'
+title  : 'Cir X-1'
+panel_size: [7,3]
+xlim : [58280,58340]
+ylim : [0.0,1.2]
+xlabel: 'MJD (day)'
+ylabel: 'Flux (photons/s/cm2)'
+legend_location: 'upper left'
+#####################
+# Plot Data Group
+#####################
+datagroup : 
+  - 
+    id : "maxi"
+    file : "J1520-571_00055058g_lc_1orb_all.dat"
+    type : "dat"
+    xcolumn : "MJDcenter"
+    xcolumn_error : "None"
+    ycolumn : "2-20keV"
+    ycolumn_error : "2-20keV_err"
+    label: "MAXI GSC (2-20 keV) 1-orbit"
+    fmt: "o"
+    color: "r"
+    markersize: 5
+    markerfacecolor: "r"
+    markeredgecolor: "k"
