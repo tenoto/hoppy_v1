@@ -1,6 +1,6 @@
 nimaketime_expr: "(FPM_OVERONLY_COUNT<1.0).and.(FPM_UNDERONLY_COUNT<20.0)"
 gtiexpr_basestr: "o1u20cut"
-outdir: "niout"
+outdir: "niout/o1u20cut"
 exclude_detid: [14,34]
 mitbgd_tbin: 200.0
 mitbgd_ql_lc_tbin: 20.0

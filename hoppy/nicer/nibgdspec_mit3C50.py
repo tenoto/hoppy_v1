@@ -816,14 +816,14 @@ mv xsel_timefile.asc xselect.log %s
 	# ==============================
 	# mathpha 
 	# ==============================
-	cmd = 'ln -s %s .' % BGD_LIBRARY_PATH
+	cmd = 'ln -s %s .' % os.getenv('NICER_BGD_LIBRARY_PATH')
 	print(cmd);os.system(cmd)
 
 	expr_list = []
 	bgdpha_exposure = 0.0 # v1.01 
 	for i in range(NUM_of_HREJ):
 		for j in range(NUM_of_IBG):
-			bg_pha = '%s/bg_group_3C50_ngt_%d%d.pha' % (BGD_MODEL_VERSION,i+1,j+1)
+			bg_pha = '%s/bg_group_3C50_ngt_%d%d.pha' % (os.getenv('NICER_BGD_MODEL_VERSION'),i+1,j+1)
 			print(i,j,norm_expmap_IBGvsHREJ[i][j],bg_pha)
 			if norm_expmap_IBGvsHREJ[i][j] > 0.0:
 				expr_list.append("'%s' * %.6f " % (bg_pha,norm_expmap_IBGvsHREJ[i][j]))
@@ -831,7 +831,7 @@ mv xsel_timefile.asc xselect.log %s
 				bgdpha_exposure += norm_expmap_IBGvsHREJ[i][j] * float(hdu['SPECTRUM'].header['EXPOSURE'])
 
 	for k in range(1,NUM_of_NZ-1):
-		noise_pha = '%s/day_noise_nz%02d.pha' % (BGD_MODEL_VERSION,k)
+		noise_pha = '%s/day_noise_nz%02d.pha' % (os.getenv('NICER_BGD_MODEL_VERSION'),k)
 		print(k,norm_expmap_NZ[k],noise_pha)
 		if norm_expmap_NZ[k] > 0.0:
 			expr_list.append("'%s' * %.6f" % (noise_pha,norm_expmap_NZ[k]))
@@ -850,7 +850,7 @@ mv xsel_timefile.asc xselect.log %s
 	cmd = 'ln -s %s .' % fname_mathpha_expr
 	print(cmd);os.system(cmd)
 
-	fname_bgd_pha = '%s/%s_%s.pha' % (outdir_prod,prefix,BGD_MODEL_VERSION)
+	fname_bgd_pha = '%s/%s_%s.pha' % (outdir_prod,prefix,os.getenv('NICER_BGD_MODEL_VERSION'))
 	cmd  = 'mathpha '
 	cmd += 'expr=@%s ' % os.path.basename(fname_mathpha_expr)
 	cmd += 'units=R outfil="%s" ' % os.path.basename(fname_bgd_pha)
@@ -873,7 +873,7 @@ mv xsel_timefile.asc xselect.log %s
 		cmd += 'fparkey %s %s+%d ANCRFILE add=yes;' % (ARFFILE,fname_bgd_pha,extnum)				
 		print(cmd);os.system(cmd)
 
-	cmd = 'rm -f %s' % BGD_MODEL_VERSION
+	cmd = 'rm -f %s' % os.getenv('NICER_BGD_MODEL_VERSION')
 	print(cmd);os.system(cmd)
 
 	# ==============================
