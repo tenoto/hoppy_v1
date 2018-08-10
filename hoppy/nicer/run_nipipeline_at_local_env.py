@@ -36,10 +36,10 @@ if __name__=="__main__":
 	print(obsid_path_list)
 	
 	for obsid_path in obsid_path_list:
-		#cmd  = 'nipipeline.py %s ' % obsid_path
-		#cmd += '--fyaml_param %s ' % args.fyaml_param
+		cmd  = 'nipipeline.py %s ' % obsid_path
+		cmd += '--fyaml_param %s ' % args.fyaml_param
 		#if args.recreate:
 		#	cmd += '--recreate '
-		#print(cmd)
-		niobsid = nip.NiObsID(obsid_path,args.fyaml_param)
-		niobsid.run(args.flag_recreate)
+		print(cmd);os.system(cmd)
+		#niobsid = nip.NiObsID(obsid_path,args.fyaml_param)
+		#niobsid.run(args.flag_recreate)

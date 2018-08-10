@@ -197,7 +197,7 @@ class NiObsID():
 		"""
 		if len(glob.glob('%s/product' % self.dir_speclc)) == 0:
 			sys.stderr.write("no gti. exit.\n")
-			exit()
+			quit()
 		self.product_cl_evt = glob.glob('%s/product/ni%s_*_clscr_gtisel.evt' % (self.dir_speclc,self.obsid))[0]
 
 		self.flc_eband_list = []
@@ -317,6 +317,9 @@ class NiObsID():
 
 	def run(self,flag_recreate):
 		self.check_input_files()
+		if flag_recreate == False and os.path.exists(self.outdir_obsid):
+			sys.stdout.write('...data has already existed. skipped.\n')
+			quit()
 		self.prepare_directory(flag_recreate)
 		self.run_nicercal()
 		self.run_niprefilter2()
@@ -329,7 +332,7 @@ class NiObsID():
 if __name__=="__main__":
 
 	sys.stdout.write('... run a single ObsID process (%s) ...\n' % __keyword__)
-	sys.stdout.write('DEFAULT_FPARAM_FILE: %s\n' % os.getenv('NICER_DEFAULT_FPARAM_FILE'))
+	sys.stdout.write('NICER_DEFAULT_FPARAM_FILE: %s\n' % os.getenv('NICER_DEFAULT_FPARAM_FILE'))
 
 	parser = argparse.ArgumentParser(
 		prog='nipipeline.py',
