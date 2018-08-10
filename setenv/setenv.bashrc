@@ -6,6 +6,7 @@ if [ $NAME = 'vicuna' ]; then
 elif [ $NAME = 'nebula' ]; then
 	echo '...setting for machine of "nebula"'
 	export HOPPY_PATH="/Users/enoto/work/drbv1/soft/git/hoppy"	
+	export HEASARC_REPOSITORY="/Users/enoto/work/drbv1/reporitory/heasarc"	
 elif [ $NAME = 'llama' ]; then
 	echo '...setting for machine of "llama"'
 	export HOPPY_PATH="/Users/enoto/work/soft/hoppy"		
@@ -28,7 +29,9 @@ export PATH=$HOPPY_PATH/hoppy/nicer:$PATH
 export NICER_BGD_MODEL_VERSION="BGMod_3C50"
 export NICER_BGD_LIBRARY_PATH="/Users/enoto/Dropbox/enoto/research/nicer/data/mitbgd/"$NICER_BGD_MODEL_VERSION
 export NICER_RESP_PATH="/Users/enoto/work/niresp"
+export NICER_DATA_REPOSITORY=$HEASARC_REPOSITORY/data/nicer/data/obs
 
 echo NICER_BGD_MODEL_VERSION=$NICER_BGD_MODEL_VERSION
 echo NICER_BGD_LIBRARY_PATH=$NICER_BGD_LIBRARY_PATH
 echo NICER_RESP_PATH=$NICER_RESP_PATH
+echo NICER_DATA_REPOSITORY = $NICER_DATA_REPOSITORY
