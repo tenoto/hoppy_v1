@@ -26,15 +26,18 @@ echo HOPPY_PATH = $HOPPY_PATH
 
 alias hoppyinit="source $HOPPY_PATH/setenv/setenv.bashrc"
 
+export HEASARC_REMOTE_FTPDIR="https://heasarc.gsfc.nasa.gov/FTP"
+
 echo "#################"
 echo "#     NICER     #"
 echo "#################"
-export NICER_SOFT_PATH="$HOPPY_PATH/hoppy/nicer"
-export NICER_BGD_MODEL_VERSION="BGMod_3C50"
-export NICER_BGD_LIBRARY_PATH="/Users/enoto/Dropbox/enoto/research/nicer/data/mitbgd/"$NICER_BGD_MODEL_VERSION
-export NICER_RESP_PATH="/Users/enoto/work/niresp"
+export NICER_SOFT_PATH=$HOPPY_PATH/hoppy/nicer
+export NICER_BGD_MODEL_VERSION=BGMod_3C50
+export NICER_BGD_LIBRARY_PATH=/Users/enoto/Dropbox/enoto/research/nicer/data/mitbgd/$NICER_BGD_MODEL_VERSION
+export NICER_RESP_PATH=/Users/enoto/work/niresp
 export NICER_DATA_REPOSITORY=$HEASARC_REPOSITORY/data/nicer/data/obs
-export NICER_DEFAULT_FPARAM_FILE=$NICER_SOFT_PATH"/nipipeline/pipeline_setup_default.yaml"
+export NICER_DEFAULT_FPARAM_FILE=$NICER_SOFT_PATH/nipipeline/pipeline_setup_default.yaml
+export NICER_SOURCE_LIST_FOR_DOWNLOAD=$NICER_SOFT_PATH/download_nicer_source.lst
 
 export PATH=$NICER_SOFT_PATH:$PATH
 
