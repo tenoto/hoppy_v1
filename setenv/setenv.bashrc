@@ -1,5 +1,9 @@
 #!/bin/bash 
 
+echo "#################"
+echo "#     HOPPY     #"
+echo "#################"
+
 NAME=$(scutil --get ComputerName)
 if [ $NAME = 'vicuna' ]; then
 	echo '...setting for machine of "vicuna"'
@@ -22,16 +26,21 @@ echo HOPPY_PATH = $HOPPY_PATH
 
 alias hoppyinit="source $HOPPY_PATH/setenv/setenv.bashrc"
 
-################
-#     NICER    # 
-################  
-export PATH=$HOPPY_PATH/hoppy/nicer:$PATH
+echo "#################"
+echo "#     NICER     #"
+echo "#################"
+export NICER_SOFT_PATH="$HOPPY_PATH/hoppy/nicer"
 export NICER_BGD_MODEL_VERSION="BGMod_3C50"
 export NICER_BGD_LIBRARY_PATH="/Users/enoto/Dropbox/enoto/research/nicer/data/mitbgd/"$NICER_BGD_MODEL_VERSION
 export NICER_RESP_PATH="/Users/enoto/work/niresp"
 export NICER_DATA_REPOSITORY=$HEASARC_REPOSITORY/data/nicer/data/obs
+export NICER_DEFAULT_FPARAM_FILE=$NICER_SOFT_PATH"/nipipeline/pipeline_setup_default.yaml"
 
+export PATH=$NICER_SOFT_PATH:$PATH
+
+echo NICER_SOFT_PATH=$NICER_SOFT_PATH
 echo NICER_BGD_MODEL_VERSION=$NICER_BGD_MODEL_VERSION
 echo NICER_BGD_LIBRARY_PATH=$NICER_BGD_LIBRARY_PATH
 echo NICER_RESP_PATH=$NICER_RESP_PATH
-echo NICER_DATA_REPOSITORY = $NICER_DATA_REPOSITORY
+echo NICER_DATA_REPOSITORY=$NICER_DATA_REPOSITORY
+echo NICER_DEFAULT_FPARAM_FILE=$NICER_DEFAULT_FPARAM_FILE

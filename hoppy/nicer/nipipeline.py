@@ -20,8 +20,6 @@ import glob
 import argparse
 import astropy.io.fits as pyfits
 
-NICER_SOFT_PATH = '%s/hoppy/nicer' % os.getenv('HOPPY_PATH')
-DEFAULT_FPARAM_FILE = '%s/nipipeline/pipeline_setup_default.yaml' % NICER_SOFT_PATH
 
 class NiObsID():
 	def __init__(self,obsid_path,fyaml_param):
@@ -331,11 +329,11 @@ class NiObsID():
 if __name__=="__main__":
 
 	sys.stdout.write('... run a single ObsID process (%s) ...\n' % __keyword__)
-	sys.stdout.write('DEFAULT_FPARAM_FILE: %s\n' % DEFAULT_FPARAM_FILE)
+	sys.stdout.write('DEFAULT_FPARAM_FILE: %s\n' % os.getenv('NICER_DEFAULT_FPARAM_FILE'))
 
 	parser = argparse.ArgumentParser(
 		prog='nipipeline.py',
-		usage='nipipeline.py obsid_path [fyaml_param.yaml] [outdir] [flag_recreate]',
+		usage='nipipeline.py obsid_path [fyaml_param.yaml] [flag_recreate]',
 		description='A series of interfaces for NICER pipelines.',
 		epilog='',
 		add_help=True,
@@ -346,7 +344,7 @@ if __name__=="__main__":
 		help='Input ObsID directory path. The directory should be a single NICER observation directory, which in turn contains xti/{events_uf,events_cl,hk,auxil} subdirectories.')
 	parser.add_argument(
 		'--fyaml_param',metavar='fyaml_param',type=str,     
-		default=DEFAULT_FPARAM_FILE,   
+		default=os.getenv('NICER_DEFAULT_FPARAM_FILE'),   
 		help='yaml file for input parameters.')
 	parser.add_argument(
 		'-r', '--recreate',action='store_true',dest='flag_recreate',
