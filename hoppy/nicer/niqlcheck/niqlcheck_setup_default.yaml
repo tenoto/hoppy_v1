@@ -1,0 +1,12 @@
+outdir_root_name: "niqlout"
+exclude_detid_list: [14,34]
+rmffile: "/Users/enoto/work/niresp/nicer_v1.02.rmf"
+arffile: "/Users/enoto/work/niresp/ni_xrcall_onaxis_v1.02_wo_detid14_34.arf"
+bgdfile: "ni1012020115_o1u20cut_clscr_gtisel.pha"
+binspec_min_significance: 5
+binspec_max_bins: 120
+binspec_emin: 0.2
+binspec_emax: 15.0
+fitspec_emin: 0.4
+fitspec_emax: 10.0
+fitmodel: "phabs_bbodyrad.xcm"
