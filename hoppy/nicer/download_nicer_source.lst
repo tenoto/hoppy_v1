@@ -112,8 +112,9 @@
 # PSR_J1231-1411
 # RX_J0437.4-4711
 # PSR_J1614-2230
-# PSR_B1937+21 # Zaven's interest 
-# PSR_B1821-24 # Zaven's interest 
+PSR_B1937+21 # Zaven's interest 
+PSR_B1821-24 # Zaven's interest 
+PSR_J0218+4232 # Zaven's interest 
 # === Timing 
 # PSR_J0218+4232
 # PSR_J1012+5307
@@ -169,4 +170,4 @@
 # XTE_J1807-294
 # M15
 # Omega_Cen_qLMXB_1
-MAXI_J1813-095
+# MAXI_J1813-095

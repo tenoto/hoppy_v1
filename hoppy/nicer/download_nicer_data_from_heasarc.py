@@ -3,7 +3,9 @@
 
 __author__  = 'Teru Enoto'
 __date__    = '2018 August 10'
-__version__ = '1.01'
+__version__ = '1.02'
+# v1.02 : modified to use "download_nicer_signleObsID_data.py"
+# v1.01 : original version
 
 import os 
 import sys 
@@ -72,7 +74,7 @@ class DownloadManager():
 			cmd = 'ln -s FTP data'
 			print(cmd);os.system(cmd)
 
-	def downalod_source(self):
+	def downalod_source(self,gpg_decryption_password=None):
 		df = pd.DataFrame.from_csv(self.fname_segment_table)
 		df['Observation ID'] = df['Observation ID'].astype(str).str.zfill(10)
 
@@ -93,6 +95,36 @@ class DownloadManager():
 				continue 
 			yyyy_mm = "{}_{:02d}".format(dtime.year, dtime.month)
 			obsid = str(row['Observation ID'])
+
+			dir_move_to = '%s/FTP/nicer/data/obs/%s' % (os.getenv('HEASARC_REPOSITORY'), yyyy_mm)
+			dir_final_path = '%s/%s' % (dir_move_to,obsid)
+			if os.path.exists(dir_final_path):
+				sys.stderr.write('target obsid %s is already existed. skipped.\n' % obsid)
+				continue
+
+			if not os.path.exists(dir_move_to):
+				cmd = 'mkdir -p %s' % dir_move_to
+				print(cmd);os.system(cmd)
+
+			now = datetime.datetime.now().isoformat()
+			message = '%s: %s %s %s\n' % (now,row['Target Name'],row['Observation ID'],row['Start TimeUTC'])
+			sys.stdout.write(message)
+			f_logfile.write(message)
+
+			try:
+				cmd = 'download_nicer_singleObsID_data.py %s %s --gpg_decryption_password %s;' % (obsid,yyyy_mm,gpg_decryption_password)
+				cmd += 'mv %s %s;\n' % (obsid, dir_move_to)
+				print(cmd);os.system(cmd)
+				f_logfile.write(cmd)
+				message = '...downloaded %s\n' % obsid				
+			except:
+				message = '...error: download failed %s\n' % obsid
+				sys.stderr.write(message)
+				continue 
+			sys.stdout.write(message)		
+				
+			"""
+			# following script is in ver.1.01
 			tarfile = '%s.tar' % obsid
 			target_path = '%s/nicer/data/obs/%s/%s' % (os.getenv('HEASARC_REMOTE_FTPDIR'), yyyy_mm, obsid)
 			dir_move_to = '%s/FTP/nicer/data/obs/%s' % (os.getenv('HEASARC_REPOSITORY'), yyyy_mm)
@@ -125,9 +157,11 @@ class DownloadManager():
 				f_logfile.write(cmd)
 				message = '...downloaded %s\n' % obsid
 			except:
-				message = '...error: download faield %s\n' % obsid
+				message = '...error: download failed %s\n' % obsid
 				sys.stderr.write(message)
 			sys.stdout.write(message)
+			"""
+
 			f_logfile.write(message)
 			#exit()
 		f_logfile.close()
@@ -152,6 +186,10 @@ if __name__=="__main__":
 		'-p','--password',metavar='password',type=str,     
 		help='NICER team password to access the webpage.')	
 	parser.add_argument(
+		'--gpg_decryption_password',metavar='password',type=str,     
+		default=None,
+		help='NICER team password to access the webpage.')		
+	parser.add_argument(
 		'-n', '--newtable',action='store_true',dest='flag_download_newtable',
 		default=True,
 		help='flag to download a new segment table.')	
@@ -161,4 +199,4 @@ if __name__=="__main__":
 	dm.download_observation_segment(args.username,args.password,args.flag_download_newtable)
 	dm.prepare_download_source_list()
 	dm.prepare_directories()
-	dm.downalod_source()
+	dm.downalod_source(gpg_decryption_password=args.gpg_decryption_password)
