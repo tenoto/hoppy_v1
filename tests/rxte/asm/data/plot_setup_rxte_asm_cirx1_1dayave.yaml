@@ -1,0 +1,10 @@
+input_asm_file: 'data/rxte_asm_cirx1_1dayave.txt'
+output_asm_crabintensity: 'out/rxte_asm_cirx1_1dayave_crab.dat'
+outpdf : 'out/rxte_asm_cirx1_1dayave_crab.pdf'
+title  : 'Cir X-1 RXTE/ASM'
+panel_size: [7,3]
+xlim : [50133,58340]
+ylim : [0.0,2.5]
+xlabel: 'MJD (day)'
+ylabel: 'Crab intensity'
+legend_location: 'upper right'
