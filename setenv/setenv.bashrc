@@ -53,3 +53,9 @@ echo "#     RXTE      #"
 echo "#################"
 export RXTE_SOFT_PATH=$HOPPY_PATH/hoppy/rxte
 export PATH=$RXTE_SOFT_PATH:$PATH
+
+echo "#################"
+echo "#     MAXI      #"
+echo "#################"
+export MAXI_SOFT_PATH=$HOPPY_PATH/hoppy/maxi
+export PATH=$MAXI_SOFT_PATH:$PATH
