@@ -1,3 +1,6 @@
+# McGill
+SS_433 
+
 # =============== Calibration  ==================
 # BKGD_RXTE_1 # 1012010101 done 18-06-15
 # BKGD_RXTE_2 # 1012020101 done 18-06-15
@@ -20,7 +23,6 @@
 # 
 # 3C_273 # 10101001ss done 18-07-03
 # U_Cep # done 18-06-26 
-# 
 # =============== Magnetars ==================
 # ==== Gugus ====
 # AX_J1818.8-1559 # done 18-07-03
@@ -112,9 +114,9 @@
 # PSR_J1231-1411
 # RX_J0437.4-4711
 # PSR_J1614-2230
-PSR_B1937+21 # Zaven's interest 
-PSR_B1821-24 # Zaven's interest 
-PSR_J0218+4232 # Zaven's interest 
+# PSR_B1937+21 # Zaven's interest 
+# PSR_B1821-24 # Zaven's interest 
+# PSR_J0218+4232 # Zaven's interest 
 # === Timing 
 # PSR_J0218+4232
 # PSR_J1012+5307
