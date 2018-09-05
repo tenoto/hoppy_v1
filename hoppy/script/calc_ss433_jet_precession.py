@@ -7,7 +7,7 @@ import argparse
 
 import math 
 
-class SS433():
+class SS433_Eikenberry_2001():
 	def __init__(self,
 		beta=0.2647,
 		theta=20.92, # degree
@@ -24,7 +24,7 @@ class SS433():
 		self.i = i
 		self.P = P
 		self.t0 = t0
-		self.t0_MJD = self.t0 + 40000
+		self.t0_MJD = self.t0 + 40000.0
 		self.gamma = 1/math.sqrt(1-self.beta**2)
 		print("beta: %.6f" % self.beta)
 		print("theta: %.6f (degree) [%.6f]" % (self.theta,math.radians(self.theta)))
@@ -35,12 +35,11 @@ class SS433():
 		print("gamma: %.6f" % self.gamma)
 
 	def get_redshift(self,MJD)	:
-		phi = (MJD - self.t0_MJD)/self.P
+		phi = (MJD - self.t0_MJD)/self.P * math.pi 
 		term1 = self.beta * math.sin(math.radians(self.theta)) * math.sin(math.radians(self.i)) * math.cos(phi)
 		term2 = self.beta * math.cos(math.radians(self.theta)) * math.cos(math.radians(self.i))
 		z1 = 1 - self.gamma * (1 + term1 + term2)
 		z2 = 1 - self.gamma * (1 - term1 - term2)
-		print(z1,z2,z1-z2)
 		return z1, z2
 
 if __name__=="__main__":
@@ -58,6 +57,6 @@ if __name__=="__main__":
 	args = parser.parse_args()	
 
 	ss433= SS433()
-	redshift = ss433.get_redshift(args.MJD)
+	z1,z2 = SS433_Eikenberry_2001.get_redshift(args.MJD)
 	print("input MJD: %.6f" % args.MJD)
-	#print("redshift: %.6f" % redshift)
+	print("redshift: %.6f %.6f" % (z1,z2))
