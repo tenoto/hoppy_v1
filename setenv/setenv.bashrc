@@ -75,3 +75,10 @@ echo "################"
 export PLOT_SOFT_PATH=$HOPPY_PATH/hoppy/plot
 export PATH=$PLOT_SOFT_PATH:$PATH
 echo PLOT_SOFT_PATH=$PLOT_SOFT_PATH
+
+echo "###################"
+echo "#     PHYSICS     #"
+echo "##################"
+export PHYSICS_SOFT_PATH=$HOPPY_PATH/hoppy/physics
+export PATH=$PHYSICS_SOFT_PATH:$PATH
+echo PHYSICS_SOFT_PATH=$PHYSICS_SOFT_PATH
