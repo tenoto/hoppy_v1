@@ -7,6 +7,8 @@ echo "#################"
 NAME=$(scutil --get ComputerName)
 if [ $NAME = 'vicuna' ]; then
 	echo '...setting for machine of "vicuna"'
+	export HOPPY_PATH="/Users/enoto/work/soft/hoppy"	
+	export HEASARC_REPOSITORY="/Users/enoto/work/repository/heasarc"		
 elif [ $NAME = 'nebula' ]; then
 	echo '...setting for machine of "nebula"'
 	export HOPPY_PATH="/Users/enoto/work/drbv1/soft/git/hoppy"	
@@ -59,3 +61,10 @@ echo "#     MAXI      #"
 echo "#################"
 export MAXI_SOFT_PATH=$HOPPY_PATH/hoppy/maxi
 export PATH=$MAXI_SOFT_PATH:$PATH
+
+echo "##################"
+echo "#     TIMING     #"
+echo "##################"
+export TIMING_SOFT_PATH=$HOPPY_PATH/hoppy/timing
+export PATH=$TIMING_SOFT_PATH:$PATH
+echo TIMING_SOFT_PATH=$TIMING_SOFT_PATH
