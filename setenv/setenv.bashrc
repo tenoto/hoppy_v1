@@ -68,3 +68,10 @@ echo "##################"
 export TIMING_SOFT_PATH=$HOPPY_PATH/hoppy/timing
 export PATH=$TIMING_SOFT_PATH:$PATH
 echo TIMING_SOFT_PATH=$TIMING_SOFT_PATH
+
+echo "################"
+echo "#     PLOT     #"
+echo "################"
+export PLOT_SOFT_PATH=$HOPPY_PATH/hoppy/plot
+export PATH=$PLOT_SOFT_PATH:$PATH
+echo PLOT_SOFT_PATH=$PLOT_SOFT_PATH
