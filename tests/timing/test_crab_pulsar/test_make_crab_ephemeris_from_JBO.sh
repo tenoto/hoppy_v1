@@ -1,3 +1,3 @@
 #!/bin/sh -f
 
-make_crab_ephemeris_from_JBO.py 57980
+make_crab_ephemeris.py 57980

@@ -6,24 +6,30 @@ __date__    = '2018 Sep. 7'
 __version__ = '1.00'
 
 code_description = """
-This script writes Tempo2-format PAR file from 
-the Jodrell Bank Observatory (JBO) Crab monthly ephemeris parameters. 
-Original code from Paul Ray. 
+This script writes Tempo2-format PAR file of the Crab pulsar from 
+[reference==JBO] the Jodrell Bank Observatory (JBO) Crab monthly ephemeris parameters. Original code from Paul Ray.
+or 
+[reference==JPN] Japanese radio observatories.
 """
 
 import os 
+import sys
+import yaml
 import numpy as np
 import argparse 
 import astropy.units as u
+from decimal import *
 from astropy.table import Table
 from astropy import log
 
 JBO_CRAB_PULSAR_MONTHLY_EPHEMERIS = "http://www.jb.man.ac.uk/pulsar/crab/crab2.txt"
 
 class Ephemeris_CrabPulsar():
-	def __init__(self,reference="JBO"):
+	def __init__(self,reference="JBO",fyaml=None):
 		if reference == "JBO":
 			self.read_JBO_Crab_ephemeris()
+		elif reference == "JPN":
+			self.read_JPN_Crab_ephemeris(fyaml)
 
 	def read_JBO_Crab_ephemeris(self):
 		cmd = 'rm -f crab2.txt'
@@ -124,11 +130,72 @@ TRES {10:.3f}
 			    self.jtab[idx]['dm'],self.jtab[idx]['dm1'],pepoch,self.jtab[idx]['tacc']))
 			f.close()
 
+	def read_JPN_Crab_ephemeris(self,fyaml,flag_write2file=True):
+		print("parameter file : %s" % fyaml)
+
+		if not os.path.exists(fyaml):
+			sys.stderr.write('file %s does not exists.\n' % fyaml)
+			exit(1)
+
+		param = yaml.load(open(fyaml))
+		print(param)
+
+		f0 = float(param['F0'])
+		f1 = float(param['F1'])
+		p0 = 1.0/f0
+		p1 = -f1/(f0*f0)
+		# This calculation of F2 comes from the C code at the end of the
+		# explanatory notes for the Jodrell ephemeris
+		f2 = Decimal(2.0)*Decimal(p1)**2/(Decimal(p0)**3)
+
+		tzrmjd = Decimal(float(param['MJD0'])) + Decimal(float(param['TJPL_MS']))/Decimal(86400000.0)
+
+		dump = """{0}
+RAJ {1}
+DECJ {2}
+EPHEM {3}
+F0 {4:.15f}
+F1 {5:.15g}
+C F2 computed as F2=2.0*P1*P1/(P0*P0*P0) according to JBO ephemeris
+F2 {6:.15g}
+PEPOCH {7:.15f}
+TZRSITE @
+TZRFRQ 0.0
+TZRMJD {8:.15f}
+UNITS TDB
+CLOCK TT(TAI)
+DM {9:.5f}
+DM1 {10:.5g}
+DMEPOCH {11:.15f}
+"""
+		print(dump.format(
+			str(param['TARGET']),
+			str(param['RA']),str(param['DEC']),str(param['EPHEM']),
+			f0,f1,f2,param['MJD0'],
+			tzrmjd,
+			param['DM'],param['DM1'],param['DMEPOCH']
+			))
+
+		if flag_write2file:
+			fname = os.path.basename(fyaml).replace('.yaml','.par')
+			cmd = 'rm -f %s' % fname
+			print(cmd);os.system(cmd)
+			
+			f = open(fname,'w')
+			f.write(dump.format(
+				str(param['TARGET']),
+				str(param['RA']),str(param['DEC']),str(param['EPHEM']),
+				f0,f1,f2,param['MJD0'],
+				tzrmjd,
+				param['DM'],param['DM1'],param['DMEPOCH'])
+			)
+			f.close()
+
 if __name__=="__main__":
 
 	parser = argparse.ArgumentParser(
-		prog='make_crab_ephemeris_from_JBO.py',
-		usage='make_crab_ephemeris_from_JBO.py MJD',
+		prog='make_crab_ephemeris.py',
+		usage='make_crab_ephemeris.py MJD',
 		description=code_description,
 		epilog='',
 		add_help=True,
