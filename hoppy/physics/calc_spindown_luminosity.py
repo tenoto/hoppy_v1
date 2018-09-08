@@ -28,7 +28,7 @@ if __name__=="__main__":
 	args = parser.parse_args()	
 	
 	dump  = "Period: %.3e (s)\n" % args.period
-	dump += "Pdot : %.3f (s/s)\n" % args.pdot
+	dump += "Pdot : %.3e (s/s)\n" % args.pdot
 	dump += "moment_of_inertia: %.3e (g cm2)\n" % (args.moment_of_inertia * 1e+45)
 	dump += "Spin-down luminosity: %.3e (erg/s)" % hoppy_physics.get_spindown_luminosity(args.period,args.pdot,moment_of_inertia=args.moment_of_inertia)
 	print(dump)
