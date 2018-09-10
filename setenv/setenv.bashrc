@@ -16,7 +16,10 @@ elif [ $NAME = 'nebula' ]; then
 elif [ $NAME = 'llama' ]; then
 	echo '...setting for machine of "llama"'
 	export HOPPY_PATH="/Users/enoto/work/soft/hoppy"		
-else
+elif [ $NAME = 'ramen' ]; then
+	echo '...setting for machine of "ramen"'
+	export HOPPY_PATH="/Users/enoto/work/soft/py2.7.14v180907/hoppy/hoppy"		
+else	
 	echo 'no corresponding computer setup.'
 fi
 
