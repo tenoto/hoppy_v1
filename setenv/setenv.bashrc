@@ -18,7 +18,8 @@ elif [ $NAME = 'llama' ]; then
 	export HOPPY_PATH="/Users/enoto/work/soft/hoppy"		
 elif [ $NAME = 'ramen' ]; then
 	echo '...setting for machine of "ramen"'
-	export HOPPY_PATH="/Users/enoto/work/soft/py2.7.14v180907/hoppy/hoppy"		
+	export HOPPY_PATH="/Users/enoto/work/soft/py2.7.14v180907/hoppy/hoppy"	
+	export HEASARC_REPOSITORY="/Volumes/NICER_BackupHDD_20180725/heasarc"			
 else	
 	echo 'no corresponding computer setup.'
 fi
