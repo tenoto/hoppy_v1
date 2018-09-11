@@ -1,0 +1,10 @@
+method leven 10 0.01
+abund angr
+xsect vern
+cosmo 70 0 0.73
+xset delta 0.01
+systematic 0
+model  phabs*bbodyrad
+    5.08852e-11      0.001          0          0     100000      1e+06
+       0.180562       0.01     0.0001      0.001        100        200
+        79.8606       0.01          0          0      1e+20      1e+24
