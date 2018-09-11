@@ -1,0 +1,10 @@
+obsid: 1013010104
+inputevt: "../../timing/test_crab_pulsar/data/ni1013010104_0mpu7_cl_500kcnt.evt"
+orbitfile: "../../timing/test_crab_pulsar/data/ni1013010104.orb"
+nu: 29.6396012015158 
+nudot: -368710.59396E-15
+epoch: 113702332.821496   
+phase_bin: 100
+pulsar_ra: 83.633218
+pulsar_dec: 22.014464
+#tJPL  = 6.779ms
