@@ -67,6 +67,21 @@ class NiPulsar():
 		cmd += '-c PHASE'
 		print(cmd);os.system(cmd)
 
+	def addabsphase(self):
+		self.outphaseevt2 = self.outphaseevt.replace('.evt','2.evt')
+
+		cmd  = "faddphase_nu.py "
+		cmd += "-i %s " % self.outphaseevt 
+		cmd += "-o %s " % self.outphaseevt2 
+		cmd += "--nu %.15f " % self.param['nu']
+		cmd += "--nudot %.6e " % self.param['nudot']
+		cmd += "-e %.6f " % self.param['epoch']
+		cmd += "--absphase "
+		print(cmd);os.system(cmd)
+
+		cmd = 'rm -f %s' % self.outphaseevt
+		print(cmd);os.system(cmd)		
+
 if __name__=="__main__":
 
 	parser = argparse.ArgumentParser(
@@ -84,3 +99,4 @@ if __name__=="__main__":
 	nipulsar.barycentric_correction()
 	nipulsar.addphase()
 	nipulsar.plot_profile()
+	nipulsar.addabsphase()

@@ -33,7 +33,10 @@ parser.add_option("-q","--nudot4",dest="nudot4",
 	action="store",help="nu 4th derivative (Hz/s4)",type="float", default=0.0)
 parser.add_option("-a","--offset",dest="offset",
 	action="store",help="offset (phase)",type="float", default=0.0)
+parser.add_option('--absphase',action='store_true',dest='flag_absphase',default=False,
+	help='flag for absolute pahse (integer, rotation cycle)')
 (options, args) = parser.parse_args()
+
 
 if options.inputfits == None:
 	print "input fits file is needed. %> -i inputfits"
@@ -64,21 +67,72 @@ if os.path.exists(options.outputfits):
 	print "output file has already existed: %s " % options.outputfits
 	quit()	
 
-operation = "%.7f + (%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0) %% 1.0" % (
-	options.offset, options.nu, options.epoch, options.nudot, options.epoch, options.nudot2, options.epoch, options.nudot3, options.epoch, options.nudot4, options.epoch) 
-print operation
-cmd  = 'fcalc infile=%s+1 ' % options.inputfits
-cmd += 'outfile=%s ' % options.outputfits
-cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation
-print cmd; os.system(cmd)
+if options.flag_absphase:
+	operation = "%.7f + (%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0)" % (
+		options.offset, options.nu, options.epoch, options.nudot, options.epoch, options.nudot2, options.epoch, options.nudot3, options.epoch, options.nudot4, options.epoch) 
+	print operation
+	cmd  = 'fcalc infile=%s+1 ' % options.inputfits
+	cmd += 'outfile=%s ' % options.outputfits
+	cmd += 'clname=\"ABSPHASE\" expr=\"%s\" rowrange=\"-\"' % operation
+	print cmd; os.system(cmd)
 
-operation2 = ' PHASE<0 ? PHASE+1 : PHASE '
-cmd  = 'fcalc clobber=yes infile=%s ' % options.outputfits
-cmd += 'outfile=%s ' % options.outputfits
-cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation2
-print cmd; os.system(cmd)
+	out = """
+HISTORY -----------------------------------------------------
+HISTORY  %s version %s at %s (ABSPHASE)
+HISTORY -----------------------------------------------------
+HISTORY   inputfits='%s'
+HISTORY   outputfits='%s'
+HISTORY   nu = %.12f / Frequency (Hz) used at phase calcuration
+HISTORY   nudot  = %.7e   / Frequency derivative (Hz/sec) used at phase calcuration
+HISTORY   nudot2 = %.7e   / Frequency 2nd derivative (Hz/sec2) used at phase calcuration
+HISTORY   nudot3 = %.7e   / Frequency 3rd derivative (Hz/sec3) used at phase calcuration
+HISTORY   nudot4 = %.7e   / Frequency 4th derivative (Hz/sec4) used at phase calcuration
+HISTORY   epoch  = %.7f   / poch (s) used at phase calcuration
+HISTORY   offset = %.7e   / Phase offset 
+HISTORY   %s 
+""" % (__name__, __version__, datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+	options.inputfits, options.outputfits,
+	options.nu, options.nudot, options.nudot2, options.nudot3, options.nudot4, 
+	options.epoch, options.offset,
+	operation)
+	print out
+	f = open('temp_header.txt','w')
+	f.write(out)
+	f.close()
+	cmd  = ''
+	for i in range(0,2):
+		cmd += 'fthedit %s+%d \@temp_header.txt\n' % (options.outputfits,i)
+		cmd += 'fparkey %.12f "%s[%d]" NU comm="Frequency for the ABSPHASE column" add=yes\n' % (
+			options.nu, options.outputfits, i)
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT comm="Frequency derivative for the ABSPHASE column" add=yes\n' % (
+			options.nudot, options.outputfits, i)	
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT2 comm="Frequency 2nd derivative for the ABSPHASE column" add=yes\n' % (
+			options.nudot2, options.outputfits, i)	
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT3 comm="Frequency 3rd derivative for the ABSPHASE column" add=yes\n' % (
+			options.nudot3, options.outputfits, i)	
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT4 comm="Frequency 4th derivative for the ABSPHASE column" add=yes\n' % (
+			options.nudot4, options.outputfits, i)						
+		cmd += 'fparkey %.6f "%s[%d]" EPOCH comm="EPOCH for the ABSPHASE column" add=yes\n' % (
+			options.epoch, options.outputfits, i)	
+	cmd += 'rm -f temp_header.txt'
+	print cmd; os.system(cmd)
 
-out = """
+else:
+	operation = "%.7f + (%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0) %% 1.0" % (
+		options.offset, options.nu, options.epoch, options.nudot, options.epoch, options.nudot2, options.epoch, options.nudot3, options.epoch, options.nudot4, options.epoch) 
+	print operation
+	cmd  = 'fcalc infile=%s+1 ' % options.inputfits
+	cmd += 'outfile=%s ' % options.outputfits
+	cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation
+	print cmd; os.system(cmd)
+
+	operation2 = ' PHASE<0 ? PHASE+1 : PHASE '
+	cmd  = 'fcalc clobber=yes infile=%s ' % options.outputfits
+	cmd += 'outfile=%s ' % options.outputfits
+	cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation2
+	print cmd; os.system(cmd)
+
+	out = """
 HISTORY -----------------------------------------------------
 HISTORY  %s version %s at %s
 HISTORY -----------------------------------------------------
@@ -98,27 +152,27 @@ HISTORY   %s
 	options.nu, options.nudot, options.nudot2, options.nudot3, options.nudot4, 
 	options.epoch, options.offset,
 	operation, operation2)
-print out
-f = open('temp_header.txt','w')
-f.write(out)
-f.close()
-cmd  = ''
-for i in range(0,2):
-	cmd += 'fthedit %s+%d \@temp_header.txt\n' % (options.outputfits,i)
-	cmd += 'fparkey %.12f "%s[%d]" NU comm="Frequency for the PHASE column" add=yes\n' % (
-		options.nu, options.outputfits, i)
-	cmd += 'fparkey %.7e "%s[%d]" NUDOT comm="Frequency derivative for the PHASE column" add=yes\n' % (
-		options.nudot, options.outputfits, i)	
-	cmd += 'fparkey %.7e "%s[%d]" NUDOT2 comm="Frequency 2nd derivative for the PHASE column" add=yes\n' % (
-		options.nudot2, options.outputfits, i)	
-	cmd += 'fparkey %.7e "%s[%d]" NUDOT3 comm="Frequency 3rd derivative for the PHASE column" add=yes\n' % (
-		options.nudot3, options.outputfits, i)	
-	cmd += 'fparkey %.7e "%s[%d]" NUDOT4 comm="Frequency 4th derivative for the PHASE column" add=yes\n' % (
-		options.nudot4, options.outputfits, i)						
-	cmd += 'fparkey %.6f "%s[%d]" EPOCH comm="EPOCH for the PHASE column" add=yes\n' % (
-		options.epoch, options.outputfits, i)	
-cmd += 'rm -f temp_header.txt'
-print cmd; os.system(cmd)
+	print out
+	f = open('temp_header.txt','w')
+	f.write(out)
+	f.close()
+	cmd  = ''
+	for i in range(0,2):
+		cmd += 'fthedit %s+%d \@temp_header.txt\n' % (options.outputfits,i)
+		cmd += 'fparkey %.12f "%s[%d]" NU comm="Frequency for the PHASE column" add=yes\n' % (
+			options.nu, options.outputfits, i)
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT comm="Frequency derivative for the PHASE column" add=yes\n' % (
+			options.nudot, options.outputfits, i)	
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT2 comm="Frequency 2nd derivative for the PHASE column" add=yes\n' % (
+			options.nudot2, options.outputfits, i)	
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT3 comm="Frequency 3rd derivative for the PHASE column" add=yes\n' % (
+			options.nudot3, options.outputfits, i)	
+		cmd += 'fparkey %.7e "%s[%d]" NUDOT4 comm="Frequency 4th derivative for the PHASE column" add=yes\n' % (
+			options.nudot4, options.outputfits, i)						
+		cmd += 'fparkey %.6f "%s[%d]" EPOCH comm="EPOCH for the PHASE column" add=yes\n' % (
+			options.epoch, options.outputfits, i)	
+	cmd += 'rm -f temp_header.txt'
+	print cmd; os.system(cmd)
 
 """
 NAME
