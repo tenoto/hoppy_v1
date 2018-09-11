@@ -112,7 +112,10 @@ print(cmd);os.system(cmd)
 pdffile = '%s.pdf' % os.path.splitext(os.path.basename(psfile))[0]
 outdir = os.path.dirname(options.outputhistfits)
 cmd  = 'ps2pdf %s ;' % (psfile)
-cmd += 'mv %s %s ' % (pdffile,outdir)
+if outdir == '':
+	cmd += 'mv %s . ' % pdffile
+else:	
+	cmd += 'mv %s %s ' % (pdffile,outdir)
 print(cmd);os.system(cmd)
 
 cmd = 'rm -f %s %s %s %s' % (tmp1,tmp2,tmp3,psfile)

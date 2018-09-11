@@ -44,8 +44,8 @@ class NiPulsar():
 		cmd  = "faddphase_nu.py "
 		cmd += "-i %s " % self.outbaryevt
 		cmd += "-o %s " % self.outphaseevt 
-		cmd += "-n %.15f " % self.param['nu']
-		cmd += "-d %.6e " % self.param['nudot']
+		cmd += "--nu %.15f " % self.param['nu']
+		cmd += "--nudot %.6e " % self.param['nudot']
 		cmd += "-e %.6f " % self.param['epoch']
 		print(cmd);os.system(cmd)
 
@@ -54,6 +54,12 @@ class NiPulsar():
 
 	def plot_profile(self):
 		self.profile = self.outphaseevt.replace('.evt','_pls.fits')
+		cmd = 'rm -f %s' % self.profile
+		print(cmd);os.system(cmd)
+
+		cmd = 'rm -f %s' % self.profile.replace('.fits','.pdf')
+		print(cmd);os.system(cmd)		
+
 		cmd  = 'fplot_pulseprofile.py '
  		cmd += '-i %s ' % self.outphaseevt 
  		cmd += '-o %s ' % self.profile
