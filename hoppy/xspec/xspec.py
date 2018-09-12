@@ -56,6 +56,13 @@ class XspecPha():
 			cmd = 'mkdir -p %s' % self.outdir
 			print(cmd);os.system(cmd)
 
+		cmd = 'cp %s %s' % (self.phafile,self.outdir)
+		print(cmd);os.system(cmd)
+		self.phafile = '%s/%s' % (self.outdir,os.path.basename(self.phafile))
+		cmd = 'cp %s %s' % (self.backgrnd,self.outdir)
+		print(cmd);os.system(cmd)
+		self.backgrnd = '%s/%s' % (self.outdir,os.path.basename(self.backgrnd))
+
 	def get_phafile_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
 
@@ -228,11 +235,17 @@ class XspecPha():
 		cmd += 'la t %s\n' % self.title
 		cmd += 'la f %s\n' % self.subtitle
 		cmd += 'hard %s/cps\n' % self.fps_fit  
-		cmd += 'we %s\n' % self.basename_fit
+		#cmd += 'we %s\n' % self.basename_fit
+		cmd += 'we temp\n' 
 		cmd += 'y\n'
 		cmd += 'exit\n'
 		cmd += 'exit\n'
 		cmd += 'EOF\n'			
+		print(cmd);os.system(cmd)
+
+		cmd  =  "grep -l 'temp.pco' temp.qdp | xargs sed -i.bak -e 's/temp.pco/%s.pco/g';" % os.path.basename(self.basename_fit)
+		cmd += 'mv temp.qdp %s.qdp;' % self.basename_fit
+		cmd += 'mv temp.pco %s.pco;' % self.basename_fit		
 		print(cmd);os.system(cmd)
 
 		cmd = 'ps2pdf.py %s' % self.fps_fit

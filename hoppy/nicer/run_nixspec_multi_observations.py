@@ -94,15 +94,17 @@ if __name__=="__main__":
 	with open(fname_yaml_output, 'w') as outfile:		
 		yaml.dump(param, outfile, default_flow_style=False)
 
-	fname_fit_csv = '%s/xspec_multifit.csv' % dir_param
-	cmd  = 'make_csv2xspec.py '
-	cmd += '%s ' % fname_filelist2csv_txt
-	cmd += '%s ' % fname_yaml_output
-	cmd += '%s ' % fname_fit_csv
+	fname_fit_csv = '%s/xspec_multifit.csv' % dir_fit
+
 	print(cmd);os.system(cmd)
 
 	dump  = "#!/bin/sh -f\n"
+	dump += '\n'
 	dump += 'rm -rf %s\n' % dir_fit 
+	dump += 'make_csv2xspec.py '
+	dump += '%s ' % fname_filelist2csv_txt
+	dump += '%s ' % fname_yaml_output
+	dump += '%s \n' % fname_fit_csv	
 	dump += 'xspec_multi_observations.py '
 	dump += '%s ' % fname_fit_csv
 	dump += '%s ' % fname_yaml_output

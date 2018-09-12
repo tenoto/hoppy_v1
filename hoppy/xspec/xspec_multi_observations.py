@@ -79,6 +79,7 @@ class MonitoringManager():
 				fluxbands=self.param['fluxbands'],
 				parerrnum=self.param['parerrnum'])
 			xspec_pha.run()
+
 			for key, value in vars(xspec_pha).iteritems(): # python 2 
 				if key in add_column_names:
 					i = add_column_names.index(key)
