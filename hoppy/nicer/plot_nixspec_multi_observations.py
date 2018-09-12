@@ -39,12 +39,13 @@ if __name__=="__main__":
 	ycolerr_name = '%s_err' % ycol_name
 	plot_xmin = int(min(df['MJD_DATEOBS']-20))
 	plot_xmax = int(max(df['MJD_DATEOBS']+20))	
-	plot_ymax = max(df[ycol_name])*1.03
+	plot_ymax = max(df[ycol_name])*1.5
 	plot_ymin = -max(df[ycol_name])*0.02
 	
 	fname_fluxplot_yaml_input = '%s/run_nixspec_multi_observations_fluxplot.yaml' % os.getenv('NICER_SOFT_PATH')
 	fname_fluxplot_yaml = '%s/run_nixspec_multi_observations_fluxplot.yaml' % os.path.dirname(args.inputyaml)
 	param_plot = yaml.load(open(fname_fluxplot_yaml_input))
+	param_plot['datagroup'][0]['file'] = '%s/xspec_multifit_fit.csv' % param['outdir']
 	param_plot['datagroup'][0]['label'] = "NICER (%.1f-%.1f keV)" % (emin_rate,emax_rate)
 	param_plot['datagroup'][0]['ycolumn'] = ycol_name
 	param_plot['datagroup'][0]['ycolumn_error'] = ycolerr_name	
