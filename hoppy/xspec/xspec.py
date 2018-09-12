@@ -243,7 +243,8 @@ class XspecPha():
 		cmd += 'EOF\n'			
 		print(cmd);os.system(cmd)
 
-		cmd  =  "grep -l 'temp.pco' temp.qdp | xargs sed -i.bak -e 's/temp.pco/%s.pco/g';" % os.path.basename(self.basename_fit)
+		#cmd  =  "grep -l 'temp.pco' temp.qdp | xargs sed -i.bak -e 's/temp.pco/%s.pco/g';" % os.path.basename(self.basename_fit)
+		cmd  =  "grep -l 'temp.pco' temp.qdp | xargs sed -e 's/temp.pco/%s.pco/g';" % os.path.basename(self.basename_fit)
 		cmd += 'mv temp.qdp %s.qdp;' % self.basename_fit
 		cmd += 'mv temp.pco %s.pco;' % self.basename_fit		
 		print(cmd);os.system(cmd)

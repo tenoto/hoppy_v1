@@ -63,6 +63,8 @@ if __name__=="__main__":
 	cmd = 'mkdir -p %s' % dir_param
 	print(cmd);os.system(cmd)
 	fname_filelist2csv_txt = '%s/filelist2csv.txt' % dir_param
+	used_src_pha_list = []
+	used_bgd_pha_list = []
 	f = open(fname_filelist2csv_txt,'w')
 	for obsid_path in glob.glob('%s/*' % dir_spec):
 		obsid = os.path.basename(obsid_path)
@@ -95,6 +97,7 @@ if __name__=="__main__":
 		yaml.dump(param, outfile, default_flow_style=False)
 
 	fname_fit_csv = '%s/xspec_multifit.csv' % dir_fit
+	fname_fitresult_csv = '%s/xspec_multifit_fit.csv' % dir_fit	
 
 	print(cmd);os.system(cmd)
 
@@ -114,10 +117,6 @@ if __name__=="__main__":
 	f.close()
 	cmd = 'chmod +x %s' % fname_run_sh
 	print(cmd);os.system(cmd)
-	print("==========================")
-	print("run following command")
-	print("==========================")	
-	print("%s" % fname_run_sh)
 
 	fname_plot_sh = '%s/02_plot_fit.sh' % dir_param
 	dump  = "#!/bin/sh -f \n"
@@ -129,3 +128,23 @@ if __name__=="__main__":
 	f.close()
 	cmd = 'chmod +x %s' % fname_plot_sh
 	print(cmd);os.system(cmd)
+
+	dir_addspec = '%s/addspec' % args.outdir
+	fname_add_sh = '%s/03_addspec.sh' % dir_param
+	dump  = '#!/bin/sh -f\n'
+	dump += 'add_nixspec_multi_observations.py '
+	dump += '%s ' % fname_fitresult_csv
+	dump += '--outdir %s ' % dir_addspec
+	dump += '--outname %s ' % os.path.basename(args.outdir)
+	f = open(fname_add_sh,'w')
+	f.write(dump)
+	f.close()
+	cmd = 'chmod +x %s' % fname_add_sh
+	print(cmd);os.system(cmd)
+
+	print("==========================")
+	print("run following command")
+	print("==========================")	
+	print("%s" % fname_run_sh)
+	print("%s" % fname_plot_sh)	
+	print("%s" % fname_add_sh)
