@@ -82,7 +82,14 @@ echo PLOT_SOFT_PATH=$PLOT_SOFT_PATH
 
 echo "###################"
 echo "#     PHYSICS     #"
-echo "##################"
+echo "###################"
 export PHYSICS_SOFT_PATH=$HOPPY_PATH/hoppy/physics
 export PATH=$PHYSICS_SOFT_PATH:$PATH
 echo PHYSICS_SOFT_PATH=$PHYSICS_SOFT_PATH
+
+echo "#################"
+echo "#     XSPEC     #"
+echo "#################"
+export XSPEC_SOFT_PATH=$HOPPY_PATH/hoppy/xspec
+export PATH=$XSPEC_SOFT_PATH:$PATH
+echo XSPEC_SOFT_PATH=$XSPEC_SOFT_PATH

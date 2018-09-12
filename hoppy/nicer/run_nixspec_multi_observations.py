@@ -5,7 +5,7 @@ import sys
 import glob
 import yaml 
 import argparse
-
+import pandas as pd 
 #import hoppy.nicer.nipipeline as nip
 
 if __name__=="__main__":
@@ -41,7 +41,10 @@ if __name__=="__main__":
 	parser.add_argument(
 		'--inputyaml',metavar='--inputyaml',type=str,
 		default="%s/run_nixspec_multi_observations.yaml" % os.getenv('NICER_SOFT_PATH'),
-		help='input yaml file.')				
+		help='input yaml file.')		
+	parser.add_argument(
+		'--rateband_nsel',metavar='--rateband_nsel',type=int,default=0,
+		help='rateband selected number')
 	args = parser.parse_args()	
 
 	print(args)
@@ -103,7 +106,7 @@ if __name__=="__main__":
 	dump += 'xspec_multi_observations.py '
 	dump += '%s ' % fname_fit_csv
 	dump += '%s ' % fname_yaml_output
-	fname_run_sh = '%s/run_fit.sh' % dir_param
+	fname_run_sh = '%s/01_run_fit.sh' % dir_param
 	f = open(fname_run_sh,'w')
 	f.write(dump)
 	f.close()
@@ -114,5 +117,13 @@ if __name__=="__main__":
 	print("==========================")	
 	print("%s" % fname_run_sh)
 
-
-
+	fname_plot_sh = '%s/02_plot_fit.sh' % dir_param
+	dump  = "#!/bin/sh -f \n"
+	dump += 'plot_nixspec_multi_observations.py '
+	dump += '%s/%s ' % (dir_fit,os.path.basename(fname_fit_csv).replace('.csv','_fit.csv'))
+	dump += '%s ' % fname_yaml_output
+	f = open(fname_plot_sh,'w')
+	f.write(dump)
+	f.close()
+	cmd = 'chmod +x %s' % fname_plot_sh
+	print(cmd);os.system(cmd)
