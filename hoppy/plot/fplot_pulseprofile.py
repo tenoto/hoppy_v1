@@ -27,19 +27,52 @@ def fplot_pulseprofile(inputfits,outfits=None,
 	dump += 'title: %s\n' % title
 	print(dump)
 
-	if not os.path.exists(inputfits):
-		sys.stderr.write('error: file %s does not exist.\n' % inputfits)
-		exit()
 	if os.path.exists(outfits):
 		sys.stderr.write('error: file %s has already existed.\n' % outfits)
 		exit()
+	outdir = os.path.dirname(outfits)
+	if not os.path.exists(outdir):
+		cmd = 'mkdir -p %s' % outdir
+		print(cmd);os.system(cmd)
+
+	cmd = 'rm -f tmp00_xselectmerge.evt;\n'
+	if inputfits[0] == '@':
+		sys.stdout.write('input : file list mode.\n')
+		inputfits_list_file = inputfits[1:]
+		if not os.path.exists(inputfits_list_file):
+			sys.stderr.write('error: file %s does not exist.\n' % inputfits_list_file)
+			exit()
+		#cmd += 'ftmerge @%s tmp00_ftmerge.evt' % inputfits_list_file
+		#print(cmd);os.system(cmd)
+		cmd  = 'xselect <<EOF\n'
+		cmd += 'xsel\n'
+		cmd += 'read event %s .\n' % inputfits
+		cmd += 'yes\n'
+		cmd += 'no\n'
+		cmd += 'extract event\n'
+		cmd += 'save event\n'
+		cmd += 'tmp00_xselectmerge.evt\n'
+		cmd += 'no\n'
+		cmd += 'exit\n'
+		cmd += 'no\n'
+		cmd += 'EOF\n'
+		print(cmd);os.system(cmd)
+		cmd = 'rm -f xselect.log\n'
+		print(cmd);os.system(cmd)
+	else:
+		if not os.path.exists(inputfits):
+			sys.stderr.write('error: file %s does not exist.\n' % inputfits)
+			exit()
+		cmd += 'ln -s %s tmp00_xselectmerge.evt' % inputfits
+		print(cmd);os.system(cmd)
 
 	cmd = 'rm -f tmp01_fselect.evt;\n'
 	if expr != None:
-		cmd += 'fselect %s tmp01_fselect.evt "%s"' % (inputfits,expr)
+		cmd += 'fselect tmp00_xselectmerge.evt tmp01_fselect.evt "%s"' % (expr)
 	else:
-		cmd += 'ln -s %s tmp01_fselect.evt' % (inputfits)
+		cmd += 'ln -s tmp00_xselectmerge.evt tmp01_fselect.evt'
 	print(cmd);os.system(cmd)
+
 
 	binwidth = 1.0/float(nbin)
 	cmd  = 'rm -f tmp02_fhisto.evt;\n'
@@ -57,7 +90,7 @@ def fplot_pulseprofile(inputfits,outfits=None,
 	cmd += 'ftmerge tmp02_fhisto.evt,tmp03_fhisto_copy.evt tmp04_ftmerge.evt'
 	print(cmd);os.system(cmd)
 
-	hdu = pyfits.open(inputfits)
+	hdu = pyfits.open('tmp00_xselectmerge.evt')
 	exposure = float(hdu[1].header['EXPOSURE'])
 	cmd  = 'fparkey %.5f tmp04_ftmerge.evt[1] EXPOSURE add=yes;\n' % exposure
 	cmd += 'fcalc tmp04_ftmerge.evt %s RATE "COUNTS/(#EXPOSURE/((float) %d ))"\n' % (outfits,nbin)
@@ -97,8 +130,10 @@ def fplot_pulseprofile(inputfits,outfits=None,
 	cmd += 'EOF\n'
 	print(cmd);os.system(cmd)
 
+	cmd = 'mv %s.{qdp,pco} %s' % (os.path.splitext(os.path.basename(psfile))[0],outdir)
+	print(cmd);os.system(cmd)
+
 	pdffile = '%s.pdf' % os.path.splitext(os.path.basename(psfile))[0]
-	outdir = os.path.dirname(outfits)
 	cmd  = 'ps2pdf %s ;' % (psfile)
 	if outdir == '':
 		cmd += 'mv %s . ' % pdffile
@@ -106,7 +141,7 @@ def fplot_pulseprofile(inputfits,outfits=None,
 		cmd += 'mv %s %s ' % (pdffile,outdir)
 	print(cmd);os.system(cmd)
 
-	for tmpfile in ['tmp01_fselect.evt','tmp02_fhisto.evt','tmp03_fhisto_copy.evt','tmp04_ftmerge.evt',psfile]:
+	for tmpfile in ['tmp00_xselectmerge.evt','tmp01_fselect.evt','tmp02_fhisto.evt','tmp03_fhisto_copy.evt','tmp04_ftmerge.evt',psfile]:
 		cmd = 'rm -f %s' % tmpfile
 		print(cmd);os.system(cmd	)
 

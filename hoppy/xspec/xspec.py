@@ -262,6 +262,7 @@ class XspecPha():
 
 		cmd  = 'xspec<<EOF\n'
 		cmd += '@%s\n' % self.fxcm_fit
+		cmd += 'query yes\n'		
 		cmd += 'fit\n'
 		cmd += 'log %s\n' % tmp_log
 		cmd += 'flux %.3f %.3f err 300,68.3\n' % (emin,emax)
@@ -299,6 +300,7 @@ class XspecPha():
 
 		cmd  = 'xspec<<EOF\n'
 		cmd += '@%s\n' % self.fxcm_fit
+		cmd += 'query yes\n'
 		cmd += 'fit\n'
 		cmd += 'log %s\n' % tmp_log
 		cmd += 'error 1.0 %d\n' % parnum
