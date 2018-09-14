@@ -1,228 +1,162 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# This script add "PULSE_PHASE" column calculated from 
+# nu, nudot, nuddot, and epoch. 
 # 
-# This script add "PHASE" column calculated from nu, nudot, nuddot, and epoch. 
-# The original script is aeplsphase.pl created by T.Enoto 
-# created by Teruaki Enoto 2015-02-07 
-# converted from perl script 
+# HISTORY
+# 2015-02-07: The original perl script aeplsphase.pl is written by Teruaki Enoto.
+# 2017-08-26: Translate to python script (Teru Enoto, ver 1.00)
+# 2018-09-14: Modified to compatible to photonphase (PINT) (Teru Enoto, ver 2.00)
 
-__name__    = 'faddphase_nu'
-__author__  = 'Teruaki Enoto'
-__version__ = '1.00'
-__date__    = '2017 Aug. 26'
+__author__  = 'Teru Enoto'
+__date__    = '2018 September 14'
+__version__ = '2.00'
 
-import os
-from optparse import OptionParser
+import os 
+import sys 
+import argparse
 from datetime import datetime 
+#import hoppy.nicer.nievent as nievt
 
-parser = OptionParser()
-parser.add_option("-i","--inputfits",dest="inputfits",
-	action="store",help="input fits file",type="string")
-parser.add_option("-o","--outputfits",dest="outputfits",
-	action="store",help="output fits file",type="string")
-parser.add_option("-e","--epoch",dest="epoch",
-	action="store",help="epoch (s)",type="float")
-parser.add_option("-n","--nu",dest="nu",
-	action="store",help="nu (Hz)",type="float")
-parser.add_option("-s","--nudot",dest="nudot",
-	action="store",help="nu derivative (Hz/s)",type="float", default=0.0)
-parser.add_option("-d","--nudot2",dest="nudot2",
-	action="store",help="nu 2nd derivative (Hz/s2)",type="float", default=0.0)
-parser.add_option("-t","--nudot3",dest="nudot3",
-	action="store",help="nu 3rd derivative (Hz/s3)",type="float", default=0.0)
-parser.add_option("-q","--nudot4",dest="nudot4",
-	action="store",help="nu 4th derivative (Hz/s4)",type="float", default=0.0)
-parser.add_option("-a","--offset",dest="offset",
-	action="store",help="offset (phase)",type="float", default=0.0)
-parser.add_option('--absphase',action='store_true',dest='flag_absphase',default=False,
-	help='flag for absolute pahse (integer, rotation cycle)')
-(options, args) = parser.parse_args()
+class EventFits():
+	def __init__(self,infits):
+		sys.stdout.write('Object of EventFits is created.\n')
+		self.infits = infits
+		sys.stdout.write('input fits file: %s\n' % self.infits)
+		if not os.path.exists(self.infits):
+			sys.stderr.write('input file does not exists: %s\n' % self.infits)
+			quit()
 
+	def faddphase_nu(self,epoch,
+		nu,nudot=0.0,nu2dot=0.0,nu3dot=0.0,nu4dot=0.0,
+		outfits=None,offset=0.0):
+		sys.stdout.write("--%s--\n" % sys._getframe().f_code.co_name)
 
-if options.inputfits == None:
-	print "input fits file is needed. %> -i inputfits"
-	quit()
-if options.outputfits == None:	
-	print "output fits file is needed. %> -o outputfits"
-	quit()
-if options.nu == None:
-	print "nu (Hz) is needed. %> -n nu"
-	quit()
-if options.epoch == None:
-	print "epoch (s) is needed. %> -e epoch"
-	quit()
-print "inputfits : %s " % options.inputfits
-print "outputfits: %s " % options.outputfits
-print "nu: %.12e (s)" % options.nu
-print "epoch: %.7f (s)" % options.epoch
-print "nudot: %.7e (s)" % options.nudot
-print "nudot2: %.7e (s)" % options.nudot2
-print "nudot3: %.7e (s)" % options.nudot3
-print "nudot4: %.7e (s)" % options.nudot4
-print "offset: %.7f (s)" % options.offset
+		if outfits != None:
+			outfits = outfits 			
+		else:
+			outfits = self.infits.replace('.evt','_phase.evt').replace('.fits','_phase.fits')
+		if os.path.exists(outfits):
+			sys.stderr.write('error: file %s has already existed.\n' % outfits)
+			quit()
+		outfits_log = outfits.replace('.evt','.log').replace('.fits','.log')
 
-if not os.path.exists(options.inputfits):
-	print "input file does not exists: %s" % options.inputfits
-	quit()
-if os.path.exists(options.outputfits):
-	print "output file has already existed: %s " % options.outputfits
-	quit()	
+		operation1 = "(%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0)" % (
+			nu, epoch, nudot, epoch, nu2dot, epoch, nu3dot, epoch, nu4dot, epoch) 
+		operation2 = '(PHASE %% 1.0) + %.7f' % (offset)
+		operation3 = ' PULSE_PHASE<0 ? PULSE_PHASE+1 : PULSE_PHASE '
+		operation4 = 'floor( PHASE )'
 
-if options.flag_absphase:
-	operation = "%.7f + (%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0)" % (
-		options.offset, options.nu, options.epoch, options.nudot, options.epoch, options.nudot2, options.epoch, options.nudot3, options.epoch, options.nudot4, options.epoch) 
-	print operation
-	cmd  = 'fcalc infile=%s+1 ' % options.inputfits
-	cmd += 'outfile=%s ' % options.outputfits
-	cmd += 'clname=\"ABSPHASE\" expr=\"%s\" rowrange=\"-\"' % operation
-	print cmd; os.system(cmd)
-
-	out = """
+		history_dump = """
 HISTORY -----------------------------------------------------
-HISTORY  %s version %s at %s (ABSPHASE)
+HISTORY faddphase_nu version %s at %s 
 HISTORY -----------------------------------------------------
-HISTORY   inputfits='%s'
-HISTORY   outputfits='%s'
-HISTORY   nu = %.12f / Frequency (Hz) used at phase calcuration
-HISTORY   nudot  = %.7e   / Frequency derivative (Hz/sec) used at phase calcuration
-HISTORY   nudot2 = %.7e   / Frequency 2nd derivative (Hz/sec2) used at phase calcuration
-HISTORY   nudot3 = %.7e   / Frequency 3rd derivative (Hz/sec3) used at phase calcuration
-HISTORY   nudot4 = %.7e   / Frequency 4th derivative (Hz/sec4) used at phase calcuration
-HISTORY   epoch  = %.7f   / poch (s) used at phase calcuration
-HISTORY   offset = %.7e   / Phase offset 
-HISTORY   %s 
-""" % (__name__, __version__, datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
-	options.inputfits, options.outputfits,
-	options.nu, options.nudot, options.nudot2, options.nudot3, options.nudot4, 
-	options.epoch, options.offset,
-	operation)
-	print out
-	f = open('temp_header.txt','w')
-	f.write(out)
-	f.close()
-	cmd  = ''
-	for i in range(0,2):
-		cmd += 'fthedit %s+%d \@temp_header.txt\n' % (options.outputfits,i)
-		cmd += 'fparkey %.12f "%s[%d]" NU comm="Frequency for the ABSPHASE column" add=yes\n' % (
-			options.nu, options.outputfits, i)
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT comm="Frequency derivative for the ABSPHASE column" add=yes\n' % (
-			options.nudot, options.outputfits, i)	
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT2 comm="Frequency 2nd derivative for the ABSPHASE column" add=yes\n' % (
-			options.nudot2, options.outputfits, i)	
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT3 comm="Frequency 3rd derivative for the ABSPHASE column" add=yes\n' % (
-			options.nudot3, options.outputfits, i)	
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT4 comm="Frequency 4th derivative for the ABSPHASE column" add=yes\n' % (
-			options.nudot4, options.outputfits, i)						
-		cmd += 'fparkey %.6f "%s[%d]" EPOCH comm="EPOCH for the ABSPHASE column" add=yes\n' % (
-			options.epoch, options.outputfits, i)	
-	cmd += 'rm -f temp_header.txt'
-	print cmd; os.system(cmd)
+HISTORY inputfits ='%s'
+HISTORY outputfits='%s'
+HISTORY nu = %.12f / Frequency (Hz) used at PULSE_PHAES calcuration
+HISTORY nudot  = %.7e   / Frequency derivative (Hz/sec) 
+HISTORY nu2dot = %.7e   / Frequency 2nd derivative (Hz/sec2) 
+HISTORY nu3dot = %.7e   / Frequency 3rd derivative (Hz/sec3) 
+HISTORY nu4dot = %.7e   / Frequency 4th derivative (Hz/sec4) 
+HISTORY epoch  = %.7f   / epoch (s) 
+HISTORY offset = %.7e   / Optional phase offset 
+HISTORY operation1: %s 
+HISTORY operation2: %s 
+HISTORY operation3: %s 
+HISTORY operation4: %s 
+""" % (__version__, datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+		self.infits, outfits,
+		nu, nudot, nu2dot, nu3dot, nu4dot, epoch, offset, 
+		operation1,operation2,operation3,operation4)
+		print(history_dump)
 
-else:
-	operation = "%.7f + (%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0) %% 1.0" % (
-		options.offset, options.nu, options.epoch, options.nudot, options.epoch, options.nudot2, options.epoch, options.nudot3, options.epoch, options.nudot4, options.epoch) 
-	print operation
-	cmd  = 'fcalc infile=%s+1 ' % options.inputfits
-	cmd += 'outfile=%s ' % options.outputfits
-	cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation
-	print cmd; os.system(cmd)
+		cmd  = 'fcalc infile=%s+1 ' % self.infits
+		cmd += 'outfile=%s ' % outfits
+		cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation1
+		print(cmd); os.system(cmd)
 
-	operation2 = ' PHASE<0 ? PHASE+1 : PHASE '
-	cmd  = 'fcalc clobber=yes infile=%s ' % options.outputfits
-	cmd += 'outfile=%s ' % options.outputfits
-	cmd += 'clname=\"PHASE\" expr=\"%s\" rowrange=\"-\"' % operation2
-	print cmd; os.system(cmd)
+		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		cmd += 'outfile=%s ' % outfits
+		cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation2
+		print cmd; os.system(cmd)
 
-	out = """
-HISTORY -----------------------------------------------------
-HISTORY  %s version %s at %s
-HISTORY -----------------------------------------------------
-HISTORY   inputfits='%s'
-HISTORY   outputfits='%s'
-HISTORY   nu = %.12f / Frequency (Hz) used at phase calcuration
-HISTORY   nudot  = %.7e   / Frequency derivative (Hz/sec) used at phase calcuration
-HISTORY   nudot2 = %.7e   / Frequency 2nd derivative (Hz/sec2) used at phase calcuration
-HISTORY   nudot3 = %.7e   / Frequency 3rd derivative (Hz/sec3) used at phase calcuration
-HISTORY   nudot4 = %.7e   / Frequency 4th derivative (Hz/sec4) used at phase calcuration
-HISTORY   epoch  = %.7f   / poch (s) used at phase calcuration
-HISTORY   offset = %.7e   / Phase offset 
-HISTORY   %s 
-HISTORY   %s 
-""" % (__name__, __version__, datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
-	options.inputfits, options.outputfits,
-	options.nu, options.nudot, options.nudot2, options.nudot3, options.nudot4, 
-	options.epoch, options.offset,
-	operation, operation2)
-	print out
-	f = open('temp_header.txt','w')
-	f.write(out)
-	f.close()
-	cmd  = ''
-	for i in range(0,2):
-		cmd += 'fthedit %s+%d \@temp_header.txt\n' % (options.outputfits,i)
-		cmd += 'fparkey %.12f "%s[%d]" NU comm="Frequency for the PHASE column" add=yes\n' % (
-			options.nu, options.outputfits, i)
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT comm="Frequency derivative for the PHASE column" add=yes\n' % (
-			options.nudot, options.outputfits, i)	
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT2 comm="Frequency 2nd derivative for the PHASE column" add=yes\n' % (
-			options.nudot2, options.outputfits, i)	
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT3 comm="Frequency 3rd derivative for the PHASE column" add=yes\n' % (
-			options.nudot3, options.outputfits, i)	
-		cmd += 'fparkey %.7e "%s[%d]" NUDOT4 comm="Frequency 4th derivative for the PHASE column" add=yes\n' % (
-			options.nudot4, options.outputfits, i)						
-		cmd += 'fparkey %.6f "%s[%d]" EPOCH comm="EPOCH for the PHASE column" add=yes\n' % (
-			options.epoch, options.outputfits, i)	
-	cmd += 'rm -f temp_header.txt'
-	print cmd; os.system(cmd)
+		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		cmd += 'outfile=%s ' % outfits
+		cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation3
+		print cmd; os.system(cmd)
 
+		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		cmd += 'outfile=%s ' % outfits
+		cmd += 'clname=\"PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation4
+		print cmd; os.system(cmd)		
+
+		f = open('temp_header.txt','w')
+		f.write(history_dump)
+		f.close()
+		cmd  = ''
+		for i in range(0,2):
+			cmd += 'fthedit %s+%d @temp_header.txt\n' % (outfits,i)
+			cmd += 'fparkey %.12f "%s[%d]" NU comm="Frequency for the PULSE_PHAES column" add=yes\n' % (nu,outfits,i)
+			cmd += 'fparkey %.7e "%s[%d]" NUDOT comm="Frequency derivative for the PULSE_PHAES column" add=yes\n' % (nudot,outfits,i)	
+			cmd += 'fparkey %.7e "%s[%d]" NU2DOT comm="Frequency 2nd derivative for the PULSE_PHAES column" add=yes\n' % (nu2dot,outfits,i)	
+			cmd += 'fparkey %.7e "%s[%d]" NU3DOT comm="Frequency 3rd derivative for the PULSE_PHAES column" add=yes\n' % (nu3dot,outfits,i)	
+			cmd += 'fparkey %.7e "%s[%d]" NU4DOT comm="Frequency 4th derivative for the PULSE_PHAES column" add=yes\n' % (nu4dot,outfits,i)						
+			cmd += 'fparkey %.6f "%s[%d]" EPOCH comm="EPOCH for the PULSE_PHAES column" add=yes\n' % (epoch,outfits,i)
+		cmd += 'rm -f temp_header.txt'
+		print(cmd); os.system(cmd)
+
+if __name__=="__main__":
+
+	usage = """
+This python script calcurates pulse phases (PULSE_PHASE) of individual X-ray photons, 
+based on an ephemeris of rotation frequency nu (Hz), its derivative (Hz/sec), and the 
+folding epoch in a unit of TIME column. For negative optional value, use an equal 
+symbol, e.g., --nudot=-3.687105e-10. We employed follogin formula. 
+	nu*(t-t0) + nudot*(t-t0)^2/2.0 + nu2dot*(t-t0)^3/6.0 + nu3dot*(t-t0)^4/24.0 + nu4dot*(t-t0)^5/120.0
+where t is an event time (TIME column), t0 is an epoch for folding. 
+
+(Note) For folding with period and its derivative
+when constant P and Pdot are given, phases when each X-ray photons comes are calcurated
+by integrtion of 1/(P + t*Pdot) from 0 to t. Here t is a difference in time of the arrival 
+time and the epoch. This gives, 1/(Pdot){ ln(1 + Pdot/P *t) }. 
+
+(Reference); 
+* http://heasarc.gsfc.nasa.gov/docs/xte/abc/time.html
+* http://heasarc.gsfc.nasa.gov/docs/xte/abc/time_tutorial.html
+* http://www.starlink.rl.ac.uk/star/docs/sun67.htx/node226.html
 """
-NAME
-        aeplsphase (${ver})
 
-DESCRIPTION
-        This perl script calcurates pulse phases of individual X-ray
-        photons, based on the period (sec), its derivative (ses/sec)
-        and the epoch (MJD in TT; Terrestrial Time). This script calls
-        aetimecalc and convert MJD to Suzaku time. Used parameters 
-	are written to the header file. 
+	parser = argparse.ArgumentParser(
+		prog='faddphase_nu.py',
+		usage='faddphase_nu.py infits epoch nu [--outfits] [--nudot] [--nudot2] [--nudot3] [--nudot3] [--nudot4] [--offset]',
+		description=usage,
+		epilog='',
+		add_help=True)
 
-        When constant P and Pdot are given, phases when each X-ray photons
-	comes are calcurated by integrtion of 1/(P + t*Pdot) from 0 to t.
-	Here t is a difference in time of the arrival time and the epoch.
-	This gives,
-	     1/(Pdot){ ln(1 + Pdot/P *t) }
-        We employed the following conversion fomula in the same way as XRONOS.
-	  Pdot  = 0 ==> "((TIME-\$epoch) \% \$per) / \$per"
-	  Pdot != 0 ==> "(log(1.0+\$pdot*(TIME-\$epoch)/\$per))/\$pdot \% 1.0"
-	Reference; 
-            http://heasarc.gsfc.nasa.gov/docs/xte/abc/time.html
-            http://heasarc.gsfc.nasa.gov/docs/xte/abc/time_tutorial.html
-            http://www.starlink.rl.ac.uk/star/docs/sun67.htx/node226.html
+	parser.add_argument('infits',metavar='infits',type=str,        
+		help='Input event fits file.')	
+	parser.add_argument('epoch',metavar='epoch',type=float,        
+		help='Folding epoch in a unit of TIME.')
+	parser.add_argument('nu',metavar='nu',type=float,        
+		help='Folding frequency nu (Hz)')
+	parser.add_argument('--nudot',metavar='nudot',type=float, default=0.0,  
+		help='Folding frequency derivative nudot (Hz/s)')	
+	parser.add_argument('--nu2dot',metavar='nu2dot',type=float, default=0.0,  
+		help='Folding frequency 2nd derivative nu2dot (Hz/s2)')	
+	parser.add_argument('--nu3dot',metavar='nu3dot',type=float, default=0.0,  
+		help='Folding frequency 3rd derivative nu3dot (Hz/s3)')	
+	parser.add_argument('--nu4dot',metavar='nu4dot',type=float, default=0.0,  
+		help='Folding frequency 4th derivative nu4dot (Hz/s4)')	
+	parser.add_argument('--outfits',metavar='outfits',type=str,default=None,
+		help='Output fits file.')		
+	parser.add_argument('--offset',metavar='offset',type=str,default="0.0",
+		help='Optional offset to phase.')												
+	args = parser.parse_args()	
+	#print(args)
 
-AUTHOR
-        Teruaki Enoto (enoto\@juno.phys.s.u-tokyo.ac.jp)
-
-SYNTAX 
-        $0 -i infits -o outfits -p period(s) -dp dpdot(ss-1) -e epoch
-
-OPTIONS
-        -p      Period (s)
-
-	-dp     Period derivative (ss\-1)
-
-	-e      Epoch (MJD in TT; Modified Julian Datein of Terrestrial Time)
-
-        -v      Verbosity: print detailed informations during the 
-                process.
-               
-        -h      Give syntax. This argument must be the first.
-
-        -help   Give detailed help (print this message). 
-		This argument must be the first.
-
-EXAMPLE
-        .\/aeplsphase \\
-	   -i crab.evt -o crab_phase.evt \\
-	   -p 3.358087649664188e-02 -dp 4.2059137835e-13 \\
-	   -e 53628.000000367673611111
-EndHelp
-"""
+	evtfits = EventFits(args.infits)
+	evtfits.faddphase_nu(args.epoch,args.nu,
+		nudot=float(args.nudot),nu2dot=float(args.nu2dot),
+		nu3dot=float(args.nu3dot),nu4dot=float(args.nu4dot),
+		outfits=args.outfits,offset=float(args.offset))
+	
