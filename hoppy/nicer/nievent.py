@@ -3,6 +3,7 @@
 
 import os 
 import sys 
+import yaml
 
 class NicerEventFits():
 	def __init__(self,inputfits):
@@ -22,8 +23,8 @@ class NicerEventFits():
 			self.baryfits = outfits 
 			self.baryfits_log = self.baryfits.replace('.evt','.log')
 		else:
-			self.baryfits = self.inputfits.replace('.gz','').replace('.evt','_bary.evt')
-			self.baryfits_log = self.inputfits.replace('.gz','').replace('.evt','_bary.log')		
+			self.baryfits = os.path.basename(self.inputfits.replace('.gz','').replace('.evt','_bary.evt'))
+			self.baryfits_log = self.baryfits.replace('.evt','.log')
 		print("output file: %s " % self.baryfits)
 		print("orbit file: %s" % orbfile)
 		print("RA (J2000): %.6f" % ra)
@@ -46,6 +47,23 @@ class NicerEventFits():
 		cmd += 'outfile=%s clname="BARY_TIME" ' % self.baryfits
 		cmd += 'expr="#MJDREFI + #MJDREFF + TIME/86400.0" '
 		print(cmd);os.system(cmd)
+
+	def run_photonphase(self,fyaml,orbfile):
+		self.fyaml = fyaml
+		print("fyaml : %s" % fyaml)
+		if not os.path.exists(self.fyaml):
+			sys.stderr.write('file %s does not exist.' % self.fyaml)
+			exit()
+		self.param = yaml.load(open(self.fyaml))
+
+		print("orbfile : %s" % orbfile)			
+		if not os.path.exists(orbfile):
+			sys.stderr.write('file %s does not exist.' % orbfile)
+			exit()					
+
+		self.barycentric_correction(
+			self.param['RA'],self.param['DEC'],orbfile,outfits=None,
+			refframe=self.param['REFFRAME'],ephem=self.param['EPHEM'])
 
 	"""
 	def addphase(self):

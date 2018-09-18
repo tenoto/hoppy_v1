@@ -29,7 +29,7 @@ class EventFits():
 
 	def faddphase_nu(self,epoch,
 		nu,nudot=0.0,nu2dot=0.0,nu3dot=0.0,nu4dot=0.0,
-		outfits=None,offset=0.0):
+		outfits=None,offset=0.0,flag_mjd=False):
 		sys.stdout.write("--%s--\n" % sys._getframe().f_code.co_name)
 
 		if outfits != None:
@@ -41,8 +41,12 @@ class EventFits():
 			quit()
 		outfits_log = outfits.replace('.evt','.log').replace('.fits','.log')
 
-		operation1 = "(%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0)" % (
-			nu, epoch, nudot, epoch, nu2dot, epoch, nu3dot, epoch, nu4dot, epoch) 
+		if flag_mjd:
+			operation1 = "(%.12e*(BARY_TIME-(%.15f))*86400. + (%.7e)*((BARY_TIME-(%.15f))*86400.)**2/2.0 + (%.7e)*((BARY_TIME-(%.15f))*86400.)**3/6.0 + (%.7e)*((BARY_TIME-(%.15f))*86400.)**4/24.0 + (%.7e)*((BARY_TIME-(%.15f))*86400.)**5/120.0)" % (
+				nu, epoch, nudot, epoch, nu2dot, epoch, nu3dot, epoch, nu4dot, epoch) 
+		else:
+			operation1 = "(%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0)" % (
+				nu, epoch, nudot, epoch, nu2dot, epoch, nu3dot, epoch, nu4dot, epoch) 
 		operation2 = '(PHASE %% 1.0) + %.7f' % (offset)
 		operation3 = ' PULSE_PHASE<0 ? PULSE_PHASE+1 : PULSE_PHASE '
 		operation4 = 'floor( PHASE )'
@@ -150,7 +154,9 @@ time and the epoch. This gives, 1/(Pdot){ ln(1 + Pdot/P *t) }.
 	parser.add_argument('--outfits',metavar='outfits',type=str,default=None,
 		help='Output fits file.')		
 	parser.add_argument('--offset',metavar='offset',type=str,default="0.0",
-		help='Optional offset to phase.')												
+		help='Optional offset to phase.')	
+	parser.add_argument('--flag_mjd',action='store_true',dest='flag_mjd',
+		default=False,help='Flag MJD (BARY_TIME) calculation.')  													
 	args = parser.parse_args()	
 	#print(args)
 
@@ -158,5 +164,6 @@ time and the epoch. This gives, 1/(Pdot){ ln(1 + Pdot/P *t) }.
 	evtfits.faddphase_nu(args.epoch,args.nu,
 		nudot=float(args.nudot),nu2dot=float(args.nu2dot),
 		nu3dot=float(args.nu3dot),nu4dot=float(args.nu4dot),
-		outfits=args.outfits,offset=float(args.offset))
+		outfits=args.outfits,offset=float(args.offset),
+		flag_mjd=args.flag_mjd)
 	
