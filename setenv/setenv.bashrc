@@ -27,12 +27,12 @@ fi
 export PATH=$HOPPY_PATH/hoppy/script:$PATH
 export PYTHONPATH=$HOPPY_PATH:$PYTHONPA
 
+export HEASARC_REMOTE_FTPDIR="https://heasarc.gsfc.nasa.gov/FTP"
+
 echo ComputerName    = $NAME
 echo HOPPY_PATH = $HOPPY_PATH
 
 alias hoppyinit="source $HOPPY_PATH/setenv/setenv.bashrc"
-
-export HEASARC_REMOTE_FTPDIR="https://heasarc.gsfc.nasa.gov/FTP"
 
 echo "#################"
 echo "#     NICER     #"
@@ -66,19 +66,19 @@ echo "#################"
 export MAXI_SOFT_PATH=$HOPPY_PATH/hoppy/maxi
 export PATH=$MAXI_SOFT_PATH:$PATH
 
+echo "#################"
+echo "#     XSPEC     #"
+echo "#################"
+export XSPEC_SOFT_PATH=$HOPPY_PATH/hoppy/xspec
+export PATH=$XSPEC_SOFT_PATH:$PATH
+echo XSPEC_SOFT_PATH=$XSPEC_SOFT_PATH
+
 echo "##################"
 echo "#     TIMING     #"
 echo "##################"
 export TIMING_SOFT_PATH=$HOPPY_PATH/hoppy/timing
 export PATH=$TIMING_SOFT_PATH:$PATH
 echo TIMING_SOFT_PATH=$TIMING_SOFT_PATH
-
-echo "################"
-echo "#     PLOT     #"
-echo "################"
-export PLOT_SOFT_PATH=$HOPPY_PATH/hoppy/plot
-export PATH=$PLOT_SOFT_PATH:$PATH
-echo PLOT_SOFT_PATH=$PLOT_SOFT_PATH
 
 echo "###################"
 echo "#     PHYSICS     #"
@@ -87,9 +87,14 @@ export PHYSICS_SOFT_PATH=$HOPPY_PATH/hoppy/physics
 export PATH=$PHYSICS_SOFT_PATH:$PATH
 echo PHYSICS_SOFT_PATH=$PHYSICS_SOFT_PATH
 
+echo "################"
+echo "#     PLOT     #"
+echo "################"
+export PLOT_SOFT_PATH=$HOPPY_PATH/hoppy/plot
+export PATH=$PLOT_SOFT_PATH:$PATH
+echo PLOT_SOFT_PATH=$PLOT_SOFT_PATH
+
 echo "#################"
-echo "#     XSPEC     #"
+echo "#     ALIAS     #"
 echo "#################"
-export XSPEC_SOFT_PATH=$HOPPY_PATH/hoppy/xspec
-export PATH=$XSPEC_SOFT_PATH:$PATH
-echo XSPEC_SOFT_PATH=$XSPEC_SOFT_PATH
+alias pasjps='ps2eps --ignoreBB -R + -f'
