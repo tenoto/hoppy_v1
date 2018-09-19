@@ -28,6 +28,8 @@ plt.rcParams['font.size'] = 18
 plt.rcParams['savefig.bbox'] = 'tight'
 plt.rcParams['axes.xmargin'] = '0' #'.05'
 plt.rcParams['axes.ymargin'] = '.2'
+plt.rcParams['xtick.major.pad'] = '10' 
+plt.rcParams['ytick.major.pad'] = '10' 
 
 def generate_cmap(colors):
 	"""

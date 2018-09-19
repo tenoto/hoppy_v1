@@ -4,8 +4,8 @@ PI_TO_KEV = 0.001
 EVENT_FILE = '/Users/enoto/Dropbox/enoto/research/nicer/analysis/psrb0656/data/180621_kobayashi/phase_ana/pn_sr_bacor_phaseadded.evt'
 ebin = 60
 pbin = 30
-emin = 0.0
-emax = 1.4 
+emin = 0.2
+emax = 1.3 
 
 import os 
 import sys 
@@ -25,6 +25,8 @@ plt.rcParams['font.size'] = 18
 plt.rcParams['savefig.bbox'] = 'tight'
 plt.rcParams['axes.xmargin'] = '0' #'.05'
 plt.rcParams['axes.ymargin'] = '.2'
+plt.rcParams['xtick.major.pad'] = '10' 
+plt.rcParams['ytick.major.pad'] = '10' 
 
 cmd  = 'rm -f psrb0656p14_xmmpn_hist2d.pdf psrb0656p14_xmmpn_hist2d_pulsed.pdf;'
 cmd += 'rm -f psrb0656p14_xmmpn_hist2d.eps psrb0656p14_xmmpn_hist2d_pulsed.eps'
