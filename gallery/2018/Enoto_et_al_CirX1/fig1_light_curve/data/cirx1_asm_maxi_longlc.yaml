@@ -1,0 +1,47 @@
+#####################
+# General
+#####################
+outpdf : './out/cirx1_asm_maxi_longlc_crab_intensity.pdf'
+title  : ''
+panel_size: [9.6,3.6]
+xlim : [50133,58390]
+ylim : [0.0,3.5]
+xlabel: 'MJD (day)'
+ylabel: 'X-ray intensity (Crab unit)'
+legend_location: 'upper center'
+#####################
+# Plot Data Group
+#####################
+datagroup : 
+  - 
+    id : "asm"
+    file : "data/rxte_asm_cirx1_1dayave_crab.dat"
+    type : "csv"
+    xcolumn : "MJD"
+    xcolumn_error : "None"
+    ycolumn : "crab_intensity"
+    ycolumn_error : "crab_intensity_uncertainty"
+    label: "RXTE/ASM (2-10 keV)"
+    fmt: "o"
+    #color: "#2196F3"
+    color: "#D35400"
+    markersize: 2.8
+    markerfacecolor: "#D35400"
+    markeredgecolor: "#D35400"
+  - 
+    id : "maxi"
+    file : "data/J1520-571_00055058g_lc_1day_all_crab.dat"
+    type : "csv"
+    xcolumn : "MJDcenter"
+    xcolumn_error : "None"
+    ycolumn : "crab_intensity_2-20keV"
+    ycolumn_error : "crab_intensity_2-20keV_err"
+    label: "MAXI/GSC (2-20 keV)"
+    fmt: "o"
+    #color: "#F44336"
+    color: "#85C1E9"
+    markersize: 2.8
+    markerfacecolor: "#85C1E9"
+    markeredgecolor: "#85C1E9"    
+arrows: [[54530.19532407,1.8,0.0,-0.3,'k'],[58312.55729167,1.8,0.0,-0.3,'k']]  
+  

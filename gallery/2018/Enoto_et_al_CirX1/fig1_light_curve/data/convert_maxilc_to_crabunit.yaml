@@ -1,0 +1,10 @@
+input_maxi_file: 'data/J1520-571_00055058g_lc_1day_all.dat'
+output_maxi_crabintensity: 'out/J1520-571_00055058g_lc_1day_all_crab.dat'
+outpdf : 'out/J1520-571_00055058g_lc_1day_all_crab.pdf'
+title  : 'Cir X-1 MAXI'
+panel_size: [7,3]
+xlim : [50133,58390]
+ylim : [0.0,2.5]
+xlabel: 'MJD (day)'
+ylabel: 'Crab intensity'
+legend_location: 'upper right'
