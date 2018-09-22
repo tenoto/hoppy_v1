@@ -16,7 +16,7 @@ SWIFT_MET_ORIGIN   = Time('2001-01-01T00:00:00.000',format='isot',scale='utc')
 NICER_MET_ORIGIN   = Time('2014-01-01T00:00:00.000',format='isot',scale='utc')
 
 class XTime():
-	def __init__(self,time_value,format,scale,flag_display=True):
+	def __init__(self,time_value,format,scale,flag_display=False):
 		self.time_value  = time_value
 		self.format = format
 		self.scale  = scale
@@ -95,7 +95,8 @@ script
 	args = parser.parse_args()	
 
 	print(args)
-	xtime = XTime("2014-01-01T00:00:00","isot","utc")
+	#xtime = XTime("2014-01-01T00:00:00","isot","utc")
+	xtime = XTime(args.input_time,args.input_format,args.input_scale)
 
 	dump  = "----- Calendar Time Formats -----\n"
 	dump += "ISO8601_TT : %s (TT)\n" % xtime.get_tt(format='isot')
