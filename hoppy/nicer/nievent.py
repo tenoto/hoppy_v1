@@ -25,6 +25,11 @@ class NicerEventFits():
 		else:
 			self.baryfits = os.path.basename(self.inputfits.replace('.gz','').replace('.evt','_bary.evt'))
 			self.baryfits_log = self.baryfits.replace('.evt','.log')
+
+		if not os.path.exists(os.path.dirname(self.baryfits)):
+			cmd = 'mkdir -p %s' % os.path.dirname(self.baryfits)
+			print(cmd);os.system(cmd)
+
 		print("output file: %s " % self.baryfits)
 		print("orbit file: %s" % orbfile)
 		print("RA (J2000): %.6f" % ra)
