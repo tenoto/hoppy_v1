@@ -43,10 +43,20 @@ class NicerEventFits():
 		cmd += ">& %s" % self.baryfits_log
 		print(cmd);os.system(cmd)
 
-		cmd  = 'fcalc clobber=yes infile=%s+1 ' % self.baryfits
+		cmd  = 'fcalc clobber=yes infile=%s[\'EVENTS\'] ' % self.baryfits
 		cmd += 'outfile=%s clname="BARY_TIME" ' % self.baryfits
 		cmd += 'expr="#MJDREFI + #MJDREFF + TIME/86400.0" '
 		print(cmd);os.system(cmd)
+
+		cmd  = 'fcalc clobber=yes infile=%s[\'GTI\'] ' % self.baryfits
+		cmd += 'outfile=%s clname="BARY_START" ' % self.baryfits
+		cmd += 'expr="#MJDREFI + #MJDREFF + START/86400.0" '
+		print(cmd);os.system(cmd)
+
+		cmd  = 'fcalc clobber=yes infile=%s[\'GTI\'] ' % self.baryfits
+		cmd += 'outfile=%s clname="BARY_STOP" ' % self.baryfits
+		cmd += 'expr="#MJDREFI + #MJDREFF + STOP/86400.0" '
+		print(cmd);os.system(cmd)		
 
 	def run_photonphase(self,fyaml,orbfile):
 		self.fyaml = fyaml
