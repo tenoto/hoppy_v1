@@ -3,6 +3,7 @@
 import pandas as pd 
 import matplotlib as mpl
 import matplotlib.pyplot as plt 
+import datetime
 
 mpl.rcParams['font.family'] = 'Times New Roman'
 mpl.rcParams['font.size'] = '14'
@@ -36,9 +37,18 @@ axes.errorbar(df_maxi['MJDcenter'],df_maxi['crab_intensity_2-20keV'],
 	markerfacecolor="#0041ff",markeredgecolor="#0041ff")
 axes.legend(loc='upper left',shadow=False)
 axes.set_xlim(50133,58390)
+# MJD 50133 --> 1996-02-20 00:00:00.000 UTC
+# MJD 58390 --> 2018-09-29 00:00:00.000 UTC
 axes.set_ylim(0.0,4.0)	
 axes.set_xlabel('MJD (day)')			
 axes.set_ylabel('X-ray intensity (Crab unit)')
+axes2 = axes.twiny()
+date1 = datetime.datetime(1996,2,20)
+date2 = datetime.datetime(2018,9,29)
+axes2.set_xlim(date1,date2)
+axes.vlines(58315,1.8,2.7,colors='k')
+axes.vlines(54530,1.8,2.7,colors='k')
+#axes2.set_xticks([0.0,0.5])
 plt.subplots_adjust(wspace=0, hspace=0)
 plt.savefig('./out/cirx1_asm_maxi_longlc_crab_intensity.pdf',dpi=300)
 
