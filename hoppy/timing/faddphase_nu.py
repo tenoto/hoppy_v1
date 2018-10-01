@@ -47,9 +47,11 @@ class EventFits():
 		else:
 			operation1 = "(%.12e*(TIME-(%.7f)) + (%.7e)*(TIME-(%.7f))**2/2.0 + (%.7e)*(TIME-(%.7f))**3/6.0 + (%.7e)*(TIME-(%.7f))**4/24.0 + (%.7e)*(TIME-(%.7f))**5/120.0)" % (
 				nu, epoch, nudot, epoch, nu2dot, epoch, nu3dot, epoch, nu4dot, epoch) 
-		operation2 = '(PHASE %% 1.0) + %.7f' % (offset)
-		operation3 = ' PULSE_PHASE<0 ? PULSE_PHASE+1 : PULSE_PHASE '
-		operation4 = 'floor( PHASE )'
+		operation2 = 'floor( PHASE )'		
+		operation3 = 'PHASE - PULSE_NUMBER'	
+		#operation2 = '(PHASE %% 1.0) + %.7f' % (offset)
+		#operation3 = ' PULSE_PHASE<0 ? PULSE_PHASE+1 : PULSE_PHASE '
+		#operation4 = 'floor( PHASE )'
 
 		history_dump = """
 HISTORY -----------------------------------------------------
@@ -67,11 +69,10 @@ HISTORY offset = %.7e   / Optional phase offset
 HISTORY operation1: %s 
 HISTORY operation2: %s 
 HISTORY operation3: %s 
-HISTORY operation4: %s 
 """ % (__version__, datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
 		self.infits, outfits,
 		nu, nudot, nu2dot, nu3dot, nu4dot, epoch, offset, 
-		operation1,operation2,operation3,operation4)
+		operation1,operation2,operation3)
 		print(history_dump)
 
 		cmd  = 'fcalc infile=%s+1 ' % self.infits
@@ -81,18 +82,28 @@ HISTORY operation4: %s
 
 		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
 		cmd += 'outfile=%s ' % outfits
-		cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation2
-		print cmd; os.system(cmd)
+		cmd += 'clname=\"PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation2
+		print(cmd); os.system(cmd)		
 
 		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
 		cmd += 'outfile=%s ' % outfits
 		cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation3
-		print cmd; os.system(cmd)
+		print(cmd); os.system(cmd)		
 
-		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
-		cmd += 'outfile=%s ' % outfits
-		cmd += 'clname=\"PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation4
-		print cmd; os.system(cmd)		
+		#cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		#cmd += 'outfile=%s ' % outfits
+		#cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation2
+		#print cmd; os.system(cmd)
+
+		#cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		#cmd += 'outfile=%s ' % outfits
+		#cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation3
+		#print cmd; os.system(cmd)
+
+		#cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		#cmd += 'outfile=%s ' % outfits
+		#cmd += 'clname=\"PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation4
+		#print cmd; os.system(cmd)		
 
 		f = open('temp_header.txt','w')
 		f.write(history_dump)
