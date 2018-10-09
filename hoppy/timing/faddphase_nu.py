@@ -49,6 +49,7 @@ class EventFits():
 				nu, epoch, nudot, epoch, nu2dot, epoch, nu3dot, epoch, nu4dot, epoch) 
 		operation2 = 'floor( PHASE )'		
 		operation3 = 'PHASE - PULSE_NUMBER'	
+		operation4 = 'PULSE_PHASE < 0.5? PULSE_NUMBER: PULSE_NUMBER+1'
 		#operation2 = '(PHASE %% 1.0) + %.7f' % (offset)
 		#operation3 = ' PULSE_PHASE<0 ? PULSE_PHASE+1 : PULSE_PHASE '
 		#operation4 = 'floor( PHASE )'
@@ -88,7 +89,12 @@ HISTORY operation3: %s
 		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
 		cmd += 'outfile=%s ' % outfits
 		cmd += 'clname=\"PULSE_PHASE\" expr=\"%s\" rowrange=\"-\"' % operation3
-		print(cmd); os.system(cmd)		
+		print(cmd); os.system(cmd)	
+
+		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
+		cmd += 'outfile=%s ' % outfits
+		cmd += 'clname=\"MOD_PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation4
+		print(cmd); os.system(cmd)				
 
 		#cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
 		#cmd += 'outfile=%s ' % outfits
