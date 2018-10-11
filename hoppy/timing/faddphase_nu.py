@@ -83,7 +83,7 @@ HISTORY operation3: %s
 
 		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
 		cmd += 'outfile=%s ' % outfits
-		cmd += 'clname=\"PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation2
+		cmd += 'clname=\"PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\" tform="K"' % operation2
 		print(cmd); os.system(cmd)		
 
 		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
@@ -93,7 +93,7 @@ HISTORY operation3: %s
 
 		cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
 		cmd += 'outfile=%s ' % outfits
-		cmd += 'clname=\"MOD_PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\"' % operation4
+		cmd += 'clname=\"MOD_PULSE_NUMBER\" expr=\"%s\" rowrange=\"-\" tform="K"' % operation4
 		print(cmd); os.system(cmd)				
 
 		#cmd  = 'fcalc clobber=yes infile=%s+1 ' % outfits 
