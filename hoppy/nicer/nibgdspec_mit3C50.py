@@ -382,9 +382,12 @@ if __name__ == '__main__':
 	# Set screening of the exlucded DET_ID 
 	# ==============================
 	exclude_detid_list = []
-	for i in args.exclude.split(','):
-		exclude_detid_list.append('%02d' % int(i))
-	print('exclude_detid_list: %s\n' % exclude_detid_list)
+	if args.exclude in ['-1','all']:
+		print('no module excluded.')
+	else:
+		for i in args.exclude.split(','):
+			exclude_detid_list.append('%02d' % int(i))
+	print('exclude_detid_list: %s' % exclude_detid_list)
 
 	num_of_fpm = 56 - 4 - len(exclude_detid_list) 
 
