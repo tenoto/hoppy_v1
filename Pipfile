@@ -9,6 +9,8 @@ numpy = "*"
 pandas = "*"
 requests = "*"
 "bs4" = "*"
+lxml = "*"
+"urllib3" = "*"
 
 [dev-packages]
 
