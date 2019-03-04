@@ -11,6 +11,9 @@ requests = "*"
 "bs4" = "*"
 lxml = "*"
 "urllib3" = "*"
+astropy = "*"
+pyyaml = "*"
+matplotlib = "*"
 
 [dev-packages]
 
