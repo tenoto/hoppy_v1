@@ -6,6 +6,21 @@ https://github.com/tenoto/hoppy
 
 Latest version 0.1.0 
 
+# Setup 
+Write following lines to the initialization setup (e.g., ~/.zshrc).
+
+```
+export HOPPY_PATH="/Users/enoto/work/drbv1/soft/git/hoppy"
+alias hoppyinit="cd $HOPPY_PATH; source setenv/setenv.bashrc; pipenv shell"
+```
+
+Everytime, you need to run the following command line inputs, 
+
+```
+heainit
+hoppyinit
+```
+
 
 ## Files and Libraries
 * hoppy
