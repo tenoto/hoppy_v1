@@ -32,7 +32,9 @@ class CSVtoXSPEC():
 		df["plotxmin"] = [self.param["plotxmin"] for i in range(len(df))]								
 		df["plotxmax"] = [self.param["plotxmax"] for i in range(len(df))]										
 		df["plotymin"] = [self.param["plotymin"] for i in range(len(df))]												
-		df["plotymax"] = [self.param["plotymax"] for i in range(len(df))]														
+		df["plotymax"] = [self.param["plotymax"] for i in range(len(df))]
+		df["plotymineeuf"] = [self.param["plotymineeuf"] for i in range(len(df))]												
+		df["plotymaxeeuf"] = [self.param["plotymaxeeuf"] for i in range(len(df))]																														
 		df["ploty2min"] = [self.param["ploty2min"] for i in range(len(df))]																
 		df["ploty2max"] = [self.param["ploty2max"] for i in range(len(df))]																		
 		print(df)

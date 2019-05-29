@@ -22,7 +22,7 @@ class XspecPha():
 		backgrnd=None,rmffile=None,arffile=None,modelxcm=None,
 		binminsig=5,binmaxbin=50,fitemin=0.4,fitemax=10.0,
 		plotxmin=0.4,plotxmax=10.0,plotymin=1e-4,plotymax=1e+4,
-		ploty2min=-10.0,ploty2max=10.0,
+		plotymineeuf=1e-4,plotymaxeeuf=10,ploty2min=-10.0,ploty2max=10.0,
 		ratebands=[[0.4,6.0],[1.0,10.0]],
 		fluxbands=[[0.4,6.0],[1.0,10.0]],
 		parerrnum=[1,2,5]):
@@ -40,6 +40,8 @@ class XspecPha():
 		self.plotxmax = plotxmax
 		self.plotymin = plotymin
 		self.plotymax = plotymax 
+		self.plotymineeuf = plotymineeuf
+		self.plotymaxeeuf = plotymaxeeuf		
 		self.ploty2min = ploty2min
 		self.ploty2max = ploty2max
 		self.ratebands = ratebands
@@ -197,7 +199,24 @@ class XspecPha():
 		dump += 'csize 1.1\n'
 		dump += 'lab pos y 2.8\n'
 		dump += 'r x %.1f %.1f\n' % (self.plotxmin,self.plotxmax)
-		dump += 'r y %.1e %.1e\n' % (self.plotymin,self.plotymax)
+		dump += 'r y1 %.1e %.1e\n' % (self.plotymin,self.plotymax)
+		dump += 'r y2 %.1f %.1f\n' % (self.ploty2min,self.ploty2max)
+		dump += 'col 2 on 2\n'
+		dump += 'win 2\n'
+		dump += 'LAB  2 COL 2 LIN 0 100 JUS Lef POS %.3f 0 " "\n' % self.fitemin
+		f.write(dump)
+		f.close()
+
+	def make_template_pcofile_eeuf(self):
+		self.fpco_fit_eeuf = '%s/%s_fit_eeuf.pco' % (self.outdir,self.basename)
+		f = open(self.fpco_fit_eeuf,'w')
+		dump  = 'time off\n'
+		dump += 'lwid 5 \n'
+		dump += 'lwid 5 on 1..100 \n'	
+		dump += 'csize 1.1\n'
+		dump += 'lab pos y 2.8\n'
+		dump += 'r x %.1f %.1f\n' % (self.plotxmin,self.plotxmax)
+		dump += 'r y1 %.1e %.1e\n' % (self.plotymineeuf,self.plotymaxeeuf)
 		dump += 'r y2 %.1f %.1f\n' % (self.ploty2min,self.ploty2max)
 		dump += 'col 2 on 2\n'
 		dump += 'win 2\n'
@@ -210,6 +229,7 @@ class XspecPha():
 
 		self.basename_fit = '%s/%s_fit' % (self.outdir,self.basename)
 		self.fps_fit = '%s/%s_fit.ps' % (self.outdir,self.basename)
+		self.fps_fit_eeuf = '%s/%s_fit_eeuf.ps' % (self.outdir,self.basename)		
 		self.fxcm_fit = '%s/%s_fit.xcm' % (self.outdir,self.basename)		
 		self.flog_fit = '%s/%s_fit.log' % (self.outdir,self.basename)				
 
@@ -240,6 +260,17 @@ class XspecPha():
 		cmd += 'we temp\n' 
 		cmd += 'y\n'
 		cmd += 'exit\n'
+		cmd += 'iplot eeuf del\n'
+		if os.path.exists(self.fpco_fit_eeuf):
+			cmd += '@%s\n' % self.fpco_fit_eeuf	
+		cmd += 'win 1 \n'
+		cmd += 'la t %s\n' % self.title
+		cmd += 'la f %s\n' % self.subtitle				
+		cmd += 'hard %s/cps\n' % self.fps_fit_eeuf 
+		#cmd += 'we %s\n' % self.basename_fit
+		cmd += 'we temp_eeuf\n' 
+		cmd += 'y\n'
+		cmd += 'exit\n'		
 		cmd += 'exit\n'
 		cmd += 'EOF\n'			
 		print(cmd);os.system(cmd)
@@ -252,6 +283,14 @@ class XspecPha():
 
 		cmd = 'ps2pdf.py %s' % self.fps_fit
 		print(cmd);os.system(cmd)
+
+		cmd  =  "grep -l 'temp_eeuf.pco' temp_eeuf.qdp | xargs sed -e 's/temp_eeuf.pco/%s_eeuf.pco/g';" % os.path.basename(self.basename_fit)
+		cmd += 'mv temp_eeuf.qdp %s_eeuf.qdp;' % self.basename_fit
+		cmd += 'mv temp_eeuf.pco %s_eeuf.pco;' % self.basename_fit		
+		print(cmd);os.system(cmd)
+
+		cmd = 'ps2pdf.py %s' % self.fps_fit_eeuf
+		print(cmd);os.system(cmd)		
 
 	def get_flux(self,fitxcm,emin,emax):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -382,6 +421,7 @@ class XspecPha():
 		self.show_property()
 		self.prepare_read_xcm()
 		self.make_template_pcofile()
+		self.make_template_pcofile_eeuf()		
 		self.fit_spectrum()
 		self.analyze_fitlog()
 		self.get_flux_list()
@@ -482,7 +522,7 @@ if __name__=="__main__":
 		help='flux energy bands (list) example:0.8-6.0,2.0-10.0 .') 	
 	parser.add_argument(
 		'--parerrnum',metavar='parerrnum',type=str,default=[1,2,5],
-		help='parameter error number list.') 														
+		help='parameter error number list.') 																
 	args = parser.parse_args()	
 	print(args)
 

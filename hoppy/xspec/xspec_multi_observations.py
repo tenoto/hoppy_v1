@@ -74,6 +74,7 @@ class MonitoringManager():
 				fitemin=dataset['fitemin'],fitemax=dataset['fitemax'],
 				plotxmin=dataset['plotxmin'],plotxmax=dataset['plotxmax'],
 				plotymin=dataset['plotymin'],plotymax=dataset['plotymax'],
+				plotymineeuf=dataset['plotymineeuf'],plotymaxeeuf=dataset['plotymaxeeuf'],				
 				ploty2min=dataset['ploty2min'],ploty2max=dataset['ploty2max'],
 				ratebands=self.param['ratebands'],
 				fluxbands=self.param['fluxbands'],
