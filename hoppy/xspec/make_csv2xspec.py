@@ -37,6 +37,7 @@ class CSVtoXSPEC():
 		df["plotymaxeeuf"] = [self.param["plotymaxeeuf"] for i in range(len(df))]																														
 		df["ploty2min"] = [self.param["ploty2min"] for i in range(len(df))]																
 		df["ploty2max"] = [self.param["ploty2max"] for i in range(len(df))]																		
+		#df["flagrun"] = [1 for i in range(len(df))]																				
 		print(df)
 
 		outdir = os.path.dirname(outcsvfile)

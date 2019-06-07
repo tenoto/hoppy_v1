@@ -61,6 +61,7 @@ class MonitoringManager():
 		add_values_matrix_par = [[] for i in range(len(add_column_names_par))]
 
 		exposure_list = []
+		list_flag_fit = []
 		for index, dataset in self.df.iterrows():
 			outdir = '%s/%s' % (self.param['outdir'],dataset['data_id'])
 			xspec_pha = XspecPha(
@@ -79,31 +80,59 @@ class MonitoringManager():
 				ratebands=self.param['ratebands'],
 				fluxbands=self.param['fluxbands'],
 				parerrnum=self.param['parerrnum'])
-			xspec_pha.run()
+			try:				
+				xspec_pha.run()
+				flag_fit = True
+				list_flag_fit.append(1)
+			except:
+				print("can not fit ... skip")
+				flag_fit = False
+				list_flag_fit.append(0)				
 
-			#for key, value in vars(xspec_pha).iteritems(): # python 2 
-			for (key, value) in vars(xspec_pha).items(): # python 2 and 3
-				if key in add_column_names:
-					i = add_column_names.index(key)
-					add_values_matrix[i].append(value)
+			if flag_fit:
+				#for key, value in vars(xspec_pha).iteritems(): # python 2 
+				for (key, value) in vars(xspec_pha).items(): # python 2 and 3
+					if key in add_column_names:
+						i = add_column_names.index(key)
+						add_values_matrix[i].append(value)
 
-			for i in range(len(self.param['ratebands'])):
-				add_values_matrix_rate[i*2].append(xspec_pha.ratelist[i][0])
-				add_values_matrix_rate[i*2+1].append(xspec_pha.ratelist[i][1])				
+				for i in range(len(self.param['ratebands'])):
+					add_values_matrix_rate[i*2].append(xspec_pha.ratelist[i][0])
+					add_values_matrix_rate[i*2+1].append(xspec_pha.ratelist[i][1])				
 
-			for i in range(len(self.param['fluxbands'])):
-				add_values_matrix_flux[i*3].append(xspec_pha.fluxlist[i][0])
-				add_values_matrix_flux[i*3+1].append(xspec_pha.fluxlist[i][1])				
-				add_values_matrix_flux[i*3+2].append(xspec_pha.fluxlist[i][2])	
+				for i in range(len(self.param['fluxbands'])):
+					add_values_matrix_flux[i*3].append(xspec_pha.fluxlist[i][0])
+					add_values_matrix_flux[i*3+1].append(xspec_pha.fluxlist[i][1])				
+					add_values_matrix_flux[i*3+2].append(xspec_pha.fluxlist[i][2])	
 
-			for i in range(len(self.param['parerrnum'])):
-				add_values_matrix_par[i*3].append(xspec_pha.parerrorlist[i][0])
-				add_values_matrix_par[i*3+1].append(xspec_pha.parerrorlist[i][1])				
-				add_values_matrix_par[i*3+2].append(xspec_pha.parerrorlist[i][2])	
+				for i in range(len(self.param['parerrnum'])):
+					add_values_matrix_par[i*3].append(xspec_pha.parerrorlist[i][0])
+					add_values_matrix_par[i*3+1].append(xspec_pha.parerrorlist[i][1])				
+					add_values_matrix_par[i*3+2].append(xspec_pha.parerrorlist[i][2])	
 
-			print(add_values_matrix)
+				print(add_values_matrix)
+			else:
+				for (key, value) in vars(xspec_pha).items(): # python 2 and 3
+					if key in add_column_names:
+						i = add_column_names.index(key)
+						add_values_matrix[i].append(None)
+
+				for i in range(len(self.param['ratebands'])):
+					add_values_matrix_rate[i*2].append(None)
+					add_values_matrix_rate[i*2+1].append(None)				
+
+				for i in range(len(self.param['fluxbands'])):
+					add_values_matrix_flux[i*3].append(None)
+					add_values_matrix_flux[i*3+1].append(None)				
+					add_values_matrix_flux[i*3+2].append(None)	
+
+				for i in range(len(self.param['parerrnum'])):
+					add_values_matrix_par[i*3].append(None)
+					add_values_matrix_par[i*3+1].append(None)				
+					add_values_matrix_par[i*3+2].append(None)	
 
 		add_dictionary = {}
+		add_dictionary["flag_fit"] = list_flag_fit
 		for key in add_column_names:
 			i = add_column_names.index(key)
 			add_dictionary[key] = add_values_matrix[i]
@@ -114,7 +143,7 @@ class MonitoringManager():
 		for i in range(len(add_column_names_par)):
 			add_dictionary[add_column_names_par[i]] = add_values_matrix_par[i] 						
 		self.df_add = pd.DataFrame(add_dictionary,
-			columns=(add_column_names+add_column_names_rate+add_column_names_flux+add_column_names_par))
+			columns=(["flag_fit"]+add_column_names+add_column_names_rate+add_column_names_flux+add_column_names_par))
 		self.df_new = self.df.join([self.df_add])
 		self.df_new.to_csv(self.outcsvfile)
 
