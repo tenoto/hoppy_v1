@@ -12,7 +12,7 @@ def run_nicerl2(obsid,indir):
 
 	print(object_name,obsid)
 
-	outdir = 'reprocess/%s/%s' % (fversion,object_name)
+	outdir = 'reprocess/nicer/%s/%s' % (fversion,object_name)
 
 	if os.path.exists('%s/%s' % (outdir,obsid)):
 		print('output directory (%s) has already existed.' % obsid)
