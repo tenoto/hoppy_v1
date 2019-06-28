@@ -21,7 +21,7 @@ def run_nicerl2(obsid,indir):
 	if not os.path.exists(outdir):
 		cmd = 'mkdir -p %s;\n' % (outdir)
 	else:
-		cmd = ';\n'
+		cmd = ''
 
 	cmd += 'cp -r %s %s/;\n' % (indir,outdir)
 	print(cmd);os.system(cmd)
