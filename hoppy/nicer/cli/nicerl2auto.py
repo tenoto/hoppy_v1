@@ -10,6 +10,8 @@ def run_nicerl2(obsid,indir):
 	mkfhdu = pyfits.open(mkffile)
 	object_name = mkfhdu[1].header['OBJECT']
 
+	print(object_name,obsid)
+
 	outdir = 'reprocess/%s/%s' % (fversion,object_name)
 
 	if os.path.exists('%s/%s' % (outdir,obsid)):
