@@ -60,6 +60,35 @@ class NicerDownloader():
 		print("Done!")
 		return outcsvfile
 
+	def get_target_summary(self,username,password,outcsvfile):
+		"""
+		download NICER target summary table as csv file.
+		"""
+		print('--- method: %s ---' % sys._getframe().f_code.co_name)
+		if username == None or password == None:
+			sys.stderr.write('Error: need username and password to access the NICER webpage.\n')
+			quit()
+		print('username: {}'.format(username))
+		print('password: {}'.format(password))	
+		if outcsvfile == None:
+			outcsvfile = 'nicer_target_table_v%s.csv' % datetime.datetime.now().strftime('%Y%m%d_%H%M')
+		print('outcsvfile: {}'.format(outcsvfile))			
+
+		print('...accessing to {}'.format(os.getenv('NICER_VIS_TEAM_WEBSITE')))
+		req = requests.get(os.getenv('NICER_VIS_TEAM_WEBSITE'),
+			auth=(username,password))
+		if req.status_code != 200:
+			sys.stderr.write('Error: problem on accessing the webpage.')
+			quit()
+		soup = BeautifulSoup(req.text,'lxml')
+		print(len(soup.find_all('table')))
+		tabs = soup.find_all('table')[4]
+		df = pd.read_html(str(tabs))[0]
+		print(df)
+		df.to_csv(outcsvfile)
+		print("Done!")
+		return outcsvfile
+
 	def get_single_obsid_data(self,obsid,yyyy_mm,decrypt):
 		"""
 		download a NICER single ObsID data set (public-->team)

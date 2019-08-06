@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 __author__ = 'Teru Enoto'
-__version__ = '1.03'
+__version__ = '1.04'
+# v1.04 : add get_target_summary
 # v1.03 : modified for "click" environment 
 # v1.02 : modified to use "download_nicer_signleObsID_data.py"
 # v1.01 : original version
@@ -16,6 +17,16 @@ import hoppy.nicer.nidownload
 def cli(ctx):
 	if ctx.invoked_subcommand is None:
 		print(ctx.get_help())
+
+@cli.command(help="download the NICER target summary table.")
+@click.option('--username',default=os.getenv('NICERPAGE_USERNAME'),
+	help="username to access the NICER team webpage.")
+@click.option('--password',default=os.getenv('NICERPAGE_PASSWORD'),
+	help="password to access the NICER team webpage.")
+@click.option('--outcsvfile',help="output csvfile name.")
+def get_target_summary(username,password,outcsvfile):
+	nidownloader = hoppy.nicer.nidownload.NicerDownloader()
+	nidownloader.get_target_summary(username,password,outcsvfile)
 
 @cli.command(help="download the NICER target segment summary table.")
 @click.option('--username',default=os.getenv('NICERPAGE_USERNAME'),
