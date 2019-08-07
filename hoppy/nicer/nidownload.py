@@ -27,6 +27,19 @@ def url_is_alive(url):
     except urllib.request.HTTPError:
         return False
 
+def wget_gsheet_nicer_download_target():
+	# https://docs.google.com/spreadsheets/d/1Kj8lYz-ZvRYdKNRWOiDBeDk5wdNqRL6O7o4jTe9wKo4/edit#gid=645136886
+	sheet_key = "1Kj8lYz-ZvRYdKNRWOiDBeDk5wdNqRL6O7o4jTe9wKo4"
+	sheet_gid = "645136886"
+	outfile = os.getenv("NICER_DOWNLOAD_SOURCE_LIST")
+	cmd = 'wget "https://docs.google.com/spreadsheets/d/%s/export?format=csv&gid=%s" -O %s' % (sheet_key,sheet_gid,outfile)
+	print(cmd);os.system(cmd)  
+	with open(outfile, "r") as f:
+		s = f.read()
+	s = s.replace(",", " ")
+	with open(outfile, "w") as f:
+		f.write(s)
+
 class NicerDownloader():
 	def __init__(self):
 		print("=== Object created: NicerDownloader ===")

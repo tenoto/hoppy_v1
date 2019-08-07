@@ -65,6 +65,10 @@ def get_multiple_obsid_data(username,password,decrypt):
 	nidownloader = hoppy.nicer.nidownload.NicerDownloader()
 	nidownloader.get_multiple_obsid_data(username,password,decrypt)
 
+@cli.command(help="wget google spreadsheet for target list of downloading.")
+def wget_gsheet_target():
+	hoppy.nicer.nidownload.wget_gsheet_nicer_download_target()
+
 def main():
 	cli()
 
