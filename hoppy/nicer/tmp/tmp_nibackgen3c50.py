@@ -12,12 +12,15 @@ os.chdir(outdir)
 num = 0
 for obsid_path in glob.glob('%s/BKGD_RXTE_?/*' % indir):
 	parent_path = os.path.dirname(obsid_path)
+	sname = os.path.basename(parent_path)
 	obsid = os.path.basename(obsid_path)
 
-	if os.path.exists('out/%s' % obsid):
-		print("obsid %s has already existed. skip." % obsid)
+	outdir = 'out/%s/%s' % (sname,obsid)
+
+	if os.path.exists(outdir):
+		print("obsid %s has already existed. skip." % outdir)
 	else:
-		cmd  = 'mkdir -p out/%s' % obsid
+		cmd  = 'mkdir -p %s' % outdir
 		print(cmd);os.system(cmd)
 
 		totspec = 'ni%s_nibackgen3C50_tot.pi' % obsid
@@ -31,10 +34,8 @@ for obsid_path in glob.glob('%s/BKGD_RXTE_?/*' % indir):
 		cmd += 'bkgspec=%s ' % bkgspec
 		print(cmd);os.system(cmd)
 
-		cmd  = 'mv %s %s out/%s' % (totspec,bkgspec,obsid)
+		cmd  = 'mv %s %s %s' % (totspec,bkgspec,outdir)
 		print(cmd);os.system(cmd)
 	num += 1 
 
-	if num > 3:
-		break
 
