@@ -41,14 +41,14 @@ if __name__=="__main__":
 
 	if filetype == 'evt':
 		num_of_gti = len(hdu[gtiname].data)
-		print("# GTI-num: START STOP Exposure(s)")
+		print("# GTI-num START STOP Exposure(s)")
 		for i in range(num_of_gti):
 			gti_start = hdu[gtiname].data[i]['START']
 			gti_stop  = hdu[gtiname].data[i]['STOP']
 			gti_exp   = gti_stop - gti_start
-			print("%03d:  %.3f %.3f %.3f" % (i,gti_start,gti_stop,gti_exp))
+			print("%03d:  %.3f %.3f %.3f" % (i+1,gti_start,gti_stop,gti_exp))
 			total_exp += gti_exp
 	elif filetype == 'mkf':
 		total_exp = len(hdu['PREFILTER'].data)
-	print("Total exposure: %.3f (s)" % total_exp)
+	print("# Total exposure: %.3f (s)" % total_exp)
 
