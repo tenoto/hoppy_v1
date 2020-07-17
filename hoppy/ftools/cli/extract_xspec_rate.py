@@ -19,6 +19,8 @@ if __name__=="__main__":
 	parser.add_argument('arf',metavar='arf',type=str, help='xspec arf file.')		
 	parser.add_argument('emin',metavar='emin',type=float, help='energy min (keV).')			
 	parser.add_argument('emax',metavar='emax',type=float, help='energy max (keV).')				
+	parser.add_argument('--keyword',metavar='keyword',type=str,default='RT01',help='energy max (keV).')	
+
 	args = parser.parse_args()	
 	#print(args.emin)			
 	#print(args.emax)				
@@ -47,13 +49,17 @@ if __name__=="__main__":
 
 	with open('tmp_rate.txt', mode='rt', encoding='utf-8') as f:
 		read_data = list(f)
-	sub_rate  = float(read_data[0])
-	sub_error = float(read_data[1])
-	print("Count rate: %.6f" % sub_rate)
-	print("Rate error: %.6f" % sub_error)
-
+	rate  = float(read_data[0])
+	error = float(read_data[1])
+	print("Count rate: %.6f" % rate)
+	print("Rate error: %.6f" % error)
 	cmd  = 'rm -f tmp_xspec.log tmp_rate.txt;\n'
 	#print(cmd);
 	os.system(cmd)
 
+	cmd  = 'fparkey %s %s %s add=yes;\n' % (rate, args.pha, args.keyword)
+	cmd += 'fparkey %s %s %s add=yes;\n' % (error, args.pha, ('%s_ERR' % args.keyword))
+	cmd += 'fparkey %s %s %s add=yes;\n' % (args.emin, args.pha, ('%sEMIN' % args.keyword))	
+	cmd += 'fparkey %s %s %s add=yes;\n' % (args.emax, args.pha, ('%sEMAX' % args.keyword))		
+	print(cmd);os.system(cmd)
 
