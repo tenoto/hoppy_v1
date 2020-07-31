@@ -61,9 +61,10 @@ class XspecPha():
 		cmd = 'cp %s %s' % (self.phafile,self.outdir)
 		print(cmd);os.system(cmd)
 		self.phafile = '%s/%s' % (self.outdir,os.path.basename(self.phafile))
-		cmd = 'cp %s %s' % (self.backgrnd,self.outdir)
-		print(cmd);os.system(cmd)
-		self.backgrnd = '%s/%s' % (self.outdir,os.path.basename(self.backgrnd))
+		if self.backgrnd != None:
+			cmd = 'cp %s %s' % (self.backgrnd,self.outdir)
+			print(cmd);os.system(cmd)
+			self.backgrnd = '%s/%s' % (self.outdir,os.path.basename(self.backgrnd))
 
 	def get_phafile_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -110,6 +111,8 @@ class XspecPha():
 		cmd += 'data 1 %s\n' % self.phafile
 		if self.backgrnd is not None:
 			cmd += 'back 1 %s\n' % self.backgrnd
+		cmd += 'resp 1 %s\n' % self.rmffile
+		cmd += 'arf 1 %s\n' % self.arffile
 		cmd += 'setplot energy\n'
 		cmd += 'ignore 1:**-%0.3f %0.3f-**\n' % (emin,emax)
 		cmd += 'log %s\n' % tmp_log
