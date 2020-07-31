@@ -1,31 +1,46 @@
 #!/usr/bin/env python
 
-__author__ = 'Teruaki Enoto'
-__version__ = '1.00'
-# v1.00 : original version
-
-import os 
-import sys 
 import argparse
-import hoppy.xspec.xspec as xspec
+
+__author__ = 'Teruaki Enoto'
+__version__ = '0.01'
+# v0.01 : 2020-08-01 : original version
+
+def get_parser():
+	"""
+	Creates a new argument parser.
+	"""
+	parser = argparse.ArgumentParser('CommandName',
+		usage='%(prog)s -a arg_file -b arg_value [-l arg_option]',
+		description='Description of this command.'
+		)
+	version = '%(prog)s ' + __version__
+	parser.add_argument('--version', '-v', action='version', version=version,
+		help='show version of this command')
+	parser.add_argument('--inputfile', '-a', metavar='filename', type=str, required=True, 
+		help='input filename (required)')	
+	parser.add_argument('--inputvalue', '-b', metavar='value', type=float, required=True, 
+		help='input float value (required)')		
+	parser.add_argument('--loption', '-l', type=optional_command,
+		help='run optional command')
+	return parser
+
+def optional_command(arg_option):
+	print("Optional command is executed with a input '%s'" % arg_option)
+
+def main(args=None):
+	"""
+	Main entry point for your project.
+	Args:
+		args : list
+		A of arguments as if they were input in the command line. 
+		Leave it None to use sys.argv.
+    """
+	parser = get_parser()
+	args = parser.parse_args(args)
+
+	print("argument filename: %s" % args.inputfile)
+	print("argument value: %s" % args.inputvalue)
 
 if __name__=="__main__":
-	parser = argparse.ArgumentParser(
-		prog='get_xspec_rate.py',
-		usage='get_xspec_rate.py pha rmf arf emin emax',
-		description='Extract count rate in the specified energy band (emin <= E < emax).',
-		epilog='',
-		add_help=True)
-
-	parser.add_argument('pha',metavar='pha',type=str,help='Input pha file.')
-	parser.add_argument('rmf',metavar='rmf',type=str,help='Input rmf file.')	
-	parser.add_argument('arf',metavar='arf',type=str,help='Input arf file.')		
-	parser.add_argument('emin',metavar='emin',type=float,help='Minimum energy (keV).')        
-	parser.add_argument('emax',metavar='emax',type=float,help='Maximum energy (keV).')        	
-	args = parser.parse_args()      
-	print(args)
-
-	nipha = xspec.XspecPha(args.pha,backgrnd=None,
-		rmffile=args.rmf,arffile=args.arf,
-		outdir='tmp_xspec')
-	print(nipha.get_rate_and_error(args.emin,args.emax))
+	main()
