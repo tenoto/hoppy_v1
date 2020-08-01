@@ -19,21 +19,14 @@ def get_parser():
 	Creates a new argument parser.
 	"""
 	parser = argparse.ArgumentParser('niget_target_summary_sheet.py',
-		usage='%(prog)s summary/segment [-u username] [-p password] [-o outcsvfile] ',
 		formatter_class=argparse.RawDescriptionHelpFormatter,
 		description="""
-(example) %(prog)s                [for "target segment sheet"] (default)
-(example) %(prog)s --flag_summary [for "target summary sheet"] 
+(examples)
+%(prog)s                [for "target segment sheet"] (default)
+%(prog)s --flag_summary [for "target summary sheet"] 
 
-This script download the NICER "target summary sheet" or "target segment sheet"
-as a csv format file from the NICER internal team webpage. 
+This script download the NICER "target summary sheet" or "target segment sheet" as a csv format file from the NICER internal team webpage. The former is a summary of the observed target list, and the latter includes individual ObsIDs with corresponding observation dates, with the default output file names of nicer_target_segment_table.csv and nicer_target_summary_table.csv, respectively. The username and password are assumed to be set as environmental parameters. The following environmental parameters should be defined in your system.
 
-The former is a summary of the observed target list, and the latter includes 
-individual ObsIDs with corresponding observation dates, with the default output 
-file names of nicer_target_segment_table.csv and nicer_target_summary_table.csv, 
-respectively. The username and password are assumed to be set as environmental 
-parameters. The following environmental parameters should be defined in your 
-system.
 	NICER_VIS_TEAM_WEBSITE : the webpage URL for the "target summary sheet"
 	NICER_SEG_TEAM_WEBSITE : the webpage URL for the "target segment sheet"
 	NICERPAGE_USERNAME : used for accessing the website 
