@@ -36,8 +36,6 @@ def run_wget(obsid, yyyy_mm):
 
 	return(cmd)
 
-
-
 def main(args=None):
 	parser = get_parser()
 	args = parser.parse_args(args)

@@ -21,6 +21,22 @@ heainit
 hoppyinit
 ```
 
+## NICER 
+
+```
+hoppy/nicer
+├── cli
+│   ├── nibarytime.py
+│   ├── niget_target_segment_sheet.py
+│   ├── niget_yyyymm.py
+│   ├── nipipe01_nicerl2.py
+│   ├── nishow_target_segment_sheet.py
+│   ├── nitimeconv.py
+│   ├── niwget.py
+│   └── plot_mitbgd3c50_photfile.py
+├── nicer.py
+├── nievent.py
+```
 
 ## Files and Libraries
 * hoppy
@@ -113,6 +129,9 @@ hoppy
     - methods
         - generate_spectra
         - fit_spectrum
+
+## NICER 
+        
 
 ## Reference
 - Python package lesson https://github.com/BillMills/pythonPackageLesson (see demo python package)
