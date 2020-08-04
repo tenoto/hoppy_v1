@@ -8,38 +8,62 @@ import pandas as pd
 from astropy.io import fits
 from astropy.time import Time
 
+class NicerObsID():
+	def __init__(self,obsid,indir,outdir):
+		print("NicerObsID %s" % obsid)
+		self.obsid = obsid
+		self.indir = indir
+		self.outdir = outdir 
+
+	def make_directory(self):
+		print("make_directory obsid=%s" % self.obsid)
+		cmd  = 'rm -rf %s;\n' % (self.outdir)
+		cmd += 'mkdir -p %s/xti;\n' % (self.outdir)
+		cmd += 'ln -s %s/{auxil,log} %s/;\n' % (self.indir,self.outdir)
+		cmd += 'ln -s %s/xti/{event_uf,hk} %s/xti/;\n' % (self.indir,self.outdir)	
+		print(cmd);os.system(cmd)
+
 class NicerElf():
 	def __init__(self,setup_yamlfile,obsid_lstfile):
-		print("... NicerElf object is generated")
+		print("... NicerElf object is generated.")
+
+		print('setup_yamlfile: {}'.format(setup_yamlfile))
+		print('obsid_lstfile: {}'.format(obsid_lstfile))
 		self.param = yaml.load(open(setup_yamlfile),Loader=yaml.SafeLoader)
 		self.obsid_lstfile = obsid_lstfile
 
+		print('param: %s' % self.param)
+
 		self.obsid_lst = []
+		self.nicerobs_lst = []
 		for line in open(self.obsid_lstfile):
 			obsid_text = line.split()[0]
 			if obsid_text in ['#','%']:
-				print('skip')
 				continue 
 			for indir in glob.glob('%s/%s' % (self.param["input_data_directory"],obsid_text)):
 				obsid = os.path.basename(indir)
-				print(obsid,indir)
 				self.obsid_lst.append(obsid)
+				self.nicerobs_lst.append(NicerObsID(
+					obsid=obsid,
+					indir=glob.glob('%s/%s' % (self.param['input_data_directory'],obsid))[0],
+					outdir=('%s/%s' % (self.param['output_directory'],obsid))
+					))
 
-		print(self.param)
-		print(self.obsid_lst)
+		print('obsid_lst: %s' % self.obsid_lst)
 
 	def make_directory(self):
 		print("...make_directory")
-		for obsid in self.obsid_lst:
-			print("make_directory obsid=%s" % obsid)
-			indir = glob.glob('%s/%s' % (self.param['input_data_directory'],obsid))[0]
-			outdir = '%s/%s' % (self.param['output_directory'],obsid)
+		for niobsid in self.nicerobs_lst:
+			niobsid.make_directory()
+			#print("make_directory obsid=%s" % obsid)
+			#indir = glob.glob('%s/%s' % (self.param['input_data_directory'],obsid))[0]
+			#outdir = '%s/%s' % (self.param['output_directory'],obsid)
 
-			cmd  = 'rm -rf %s;\n' % (outdir)
-			cmd += 'mkdir -p %s/xti;\n' % (outdir)
-			cmd += 'ln -s %s/{auxil,log} %s/;\n' % (indir,outdir)
-			cmd += 'ln -s %s/xti/{event_uf,hk} %s/xti/;\n' % (indir,outdir)	
-			print(cmd);os.system(cmd)
+			#cmd  = 'rm -rf %s;\n' % (outdir)
+			#cmd += 'mkdir -p %s/xti;\n' % (outdir)
+			#cmd += 'ln -s %s/{auxil,log} %s/;\n' % (indir,outdir)
+			#cmd += 'ln -s %s/xti/{event_uf,hk} %s/xti/;\n' % (indir,outdir)	
+			#print(cmd);os.system(cmd)
 
 	def run_nicerl2(self):
 		print("...run_nicerl2")		
@@ -182,86 +206,95 @@ class NicerElf():
 			print(cmd)
 			os.system(cmd)
 
+	def plot_lightcurve(self):
+		print("plot_lightcurve")
+
+		for obsid in self.obsid_lst:
+			print("plot_lightcurve obsid=%s" % obsid)
+			outdir = '%s/%s' % (self.param['output_directory'],obsid)
+
+			cmd  = 'rm -rf %s/lc;\n' % outdir
+			cmd += 'mkdir -p %s/lc\n' % outdir
+			print(cmd);os.system(cmd)
+
+			clevt = '%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (outdir,obsid)
+			hdu = fits.open(clevt)
+			if len(hdu['EVENTS'].data) == 0:
+				flog = '%s/lc/lcurve_%s.log' % (outdir,obsid)
+				f = open(flog,'w')
+				message = 'no cleaned event in the original file %s' % clevt
+				print(message)
+				f.write(message)
+				f.close()
+				continue 
+
+			for eband in self.param['lc_energy_bands']:
+				emin,emax = self.param['lc_energy_bands'][eband]
+				fenesel = 'ni%s_0mpu7_cl_%s.evt' % (obsid,eband)
+				cmd += "fselect_energy.py %s/xti/event_cl/ni%s_0mpu7_cl.evt %s %.1f %.1f;\n" % (outdir,obsid,fenesel,emin,emax)
+				cmd += "mv %s %s/lc;\n" % (fenesel,outdir)
+			print(cmd)
+			os.system(cmd)
+
+			hdu = fits.open('%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (outdir,obsid))
+			t = Time([hdu[1].header['DATE-OBS'],hdu[1].header['DATE-END']],format='isot', scale='utc')
+			key_date_obs = hdu[1].header['DATE-OBS']      
+			key_date_end = hdu[1].header['DATE-END']      
+			key_exposure = hdu[1].header['EXPOSURE']
+			key_target = hdu[1].header['OBJECT']
+			key_mjd_start = t.mjd[0]
+			key_mjd_stop = t.mjd[1]       
+			key_onsource = (key_mjd_stop-key_mjd_start)*24.0*60.0*60.0
+			nbint = round(float(key_onsource) / float(self.param['lc_time_bin_sec']))
+			title = 'ObsID:%s %s MJD:%.2f (exposure %.1f s)' % (obsid,key_date_obs,key_mjd_start,key_exposure)
+
+			fcmd = '%s/lc/ni%s_0mpu7_cl_ene.sh' % (outdir,obsid)
+			flog = '%s/lc/ni%s_0mpu7_cl_ene.log' % (outdir,obsid)
+			f = open(fcmd,'w')
+			dump  = '#!/bin/sh -f\n'
+			flcfile = '%s/lc/ni%s_0mpu7_cl_ene.flc' % (outdir,obsid)
+			dump += 'lcurve nser=%d ' % len(self.param['lc_energy_bands'])
+			i = 1
+			for eband in self.param['lc_energy_bands']:
+				fenesel = 'ni%s_0mpu7_cl_%s.evt' % (obsid,eband) 
+				dump += 'cfile%d="%s/lc/%s" ' % (i,outdir,fenesel)
+				i += 1 
+			dump += 'window="-" ' 
+			dump += 'dtnb=%d ' % self.param['lc_time_bin_sec']
+			dump += 'nbint=%d ' % nbint
+			dump += 'outfile="%s" ' % flcfile 
+			dump += 'plotdnum=%s ' % len(self.param['lc_energy_bands'])
+			dump += 'plot=yes plotdev="/xw" <<EOF\n'
+			dump += 'lwid 5\n'
+			dump += 'la ot %s\n' % title 
+			dump += 'lab rotate\n'
+			dump += 'lab pos y 2.8\n'
+			i = 2
+			for eband in self.param['lc_energy_bands']:
+				emin,emax = self.param['lc_energy_bands'][eband]		
+				dump += 'lab y%d %.1f-%.1f keV\n' % (i,emin,emax)
+				dump += 'col %d on %d\n' % (i,i)
+				i += 1 
+			dump += 'hard ni%s_0mpu7_cl_ene.ps/cps\n' % obsid
+			dump += 'quit\n'
+			dump += 'EOF'
+			print(dump)
+			f.write(dump)
+			f.close()
+
+			# run the script.
+			cmd  = 'chmod +x %s\n' % fcmd
+			cmd += './%s' % fcmd
+			print(cmd)
+			os.system(cmd)
+
+			cmd  = "ps2pdf ni%s_0mpu7_cl_ene.ps\n" % obsid
+			cmd += "rm -f ni%s_0mpu7_cl_ene.ps\n" % obsid
+			cmd += "mv ni%s_0mpu7_cl_ene.pdf %s/lc/\n" % (obsid,outdir)
+			print(cmd)
+			os.system(cmd)			
+
 """
-def plot_lightcurve(obsid):
-	print("plot_lightcurve obsid=%s" % obsid)
-
-	if not os.path.exists('%s/%s' % (outdir,obsid)):
-		print("ERROR no directory for %s." % obsid)
-		return -1
-
-	cmd  = 'rm -rf %s/%s/lc;\n' % (outdir,obsid)
-	cmd += 'mkdir -p %s/%s/lc\n' % (outdir,obsid)
-	print(cmd);os.system(cmd)
-
-	for eband in param['lc_energy_bands']:
-		emin,emax = param['lc_energy_bands'][eband]
-		fenesel = 'ni%s_0mpu7_cl_%s.evt' % (obsid,eband)
-		cmd += "fselect_energy.py %s/%s/xti/event_cl/ni%s_0mpu7_cl.evt %s %.1f %.1f;\n" % (outdir,obsid,obsid,fenesel,emin,emax)
-		cmd += "mv %s %s/%s/lc;\n" % (fenesel,outdir,obsid)
-	print(cmd)
-	os.system(cmd)
-
-	hdu = fits.open('%s/%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (outdir,obsid,obsid))
-	t = Time([hdu[1].header['DATE-OBS'],hdu[1].header['DATE-END']],format='isot', scale='utc')
-	key_date_obs = hdu[1].header['DATE-OBS']      
-	key_date_end = hdu[1].header['DATE-END']      
-	key_exposure = hdu[1].header['EXPOSURE']
-	key_target = hdu[1].header['OBJECT']
-	key_mjd_start = t.mjd[0]
-	key_mjd_stop = t.mjd[1]       
-	key_onsource = (key_mjd_stop-key_mjd_start)*24.0*60.0*60.0
-	nbint = round(float(key_onsource) / float(param['lc_time_bin_sec']))
-	title = 'ObsID:%s %s MJD:%.2f (exposure %.1f s)' % (obsid,key_date_obs,key_mjd_start,key_exposure)
-
-	fcmd = '%s/%s/lc/ni%s_0mpu7_cl_ene.sh' % (outdir,obsid,obsid)
-	flog = '%s/%s/lc/ni%s_0mpu7_cl_ene.log' % (outdir,obsid,obsid)
-	f = open(fcmd,'w')
-	dump  = '#!/bin/sh -f\n'
-
-	flcfile = '%s/%s/lc/ni%s_0mpu7_cl_ene.flc' % (outdir,obsid,obsid)
-	dump += 'lcurve nser=%d ' % len(param['lc_energy_bands'])
-	i = 1
-	for eband in param['lc_energy_bands']:
-		fenesel = 'ni%s_0mpu7_cl_%s.evt' % (obsid,eband) 
-		dump += 'cfile%d="%s/%s/lc/%s" ' % (i,outdir,obsid,fenesel)
-		i += 1 
-	dump += 'window="-" ' 
-	dump += 'dtnb=%d ' % param['lc_time_bin_sec']
-	dump += 'nbint=%d ' % nbint
-	dump += 'outfile="%s" ' % flcfile 
-	dump += 'plotdnum=%s ' % len(param['lc_energy_bands'])
-	dump += 'plot=yes plotdev="/xw" <<EOF\n'
-	dump += 'lwid 5\n'
-	dump += 'la ot %s\n' % title 
-	dump += 'lab rotate\n'
-	dump += 'lab pos y 2.8\n'
-	i = 2
-	for eband in param['lc_energy_bands']:
-		emin,emax = param['lc_energy_bands'][eband]		
-		dump += 'lab y%d %.1f-%.1f keV\n' % (i,emin,emax)
-		dump += 'col %d on %d\n' % (i,i)
-		i += 1 
-	dump += 'hard ni%s_0mpu7_cl_ene.ps/cps\n' % obsid
-	dump += 'quit\n'
-	dump += 'EOF'
-	print(dump)
-	f.write(dump)
-	f.close()
-
-	# run the script.
-	cmd  = 'chmod +x %s\n' % fcmd
-	cmd += './%s' % fcmd
-	print(cmd)
-	os.system(cmd)
-
-	cmd  = "ps2pdf ni%s_0mpu7_cl_ene.ps\n" % obsid
-	cmd += "rm -f ni%s_0mpu7_cl_ene.ps\n" % obsid
-	cmd += "mv ni%s_0mpu7_cl_ene.pdf %s/%s/lc/\n" % (obsid,outdir,obsid)
-	print(cmd)
-	os.system(cmd)
-
-
 def record_results(obsid):
 	print("record_results obsid=%s" % obsid)
 

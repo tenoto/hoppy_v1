@@ -34,8 +34,9 @@ def main(args=None):
 
 	nielf = NicerElf(setup_yamlfile=args.setup_yamlfile,obsid_lstfile=args.obsid_lstfile)
 	nielf.make_directory()
-	nielf.run_nicerl2()	
-	nielf.run_nibackgen3C50()
+	#nielf.run_nicerl2()	
+	#nielf.run_nibackgen3C50()
+	#nielf.plot_lightcurve()
 
 if __name__=="__main__":
 	main()
