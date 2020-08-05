@@ -44,7 +44,7 @@ class NicerObsID():
 			if len(hdu['EVENTS'].data) > 0:
 				self.flag_clevt_has_events = True
 			else:
-				self.flag_clevt_has_events = True
+				self.flag_clevt_has_events = False
 		else:
 			self.flag_exists_clevt = False
 
@@ -311,6 +311,14 @@ class NicerObsID():
 			return -1 
 
 		clevt = '%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (self.outdir,self.obsid)
+		hdu = fits.open(clevt)
+		if self.param['barycorr_RA_deg'] == "None":
+			self.param['barycorr_RA_deg'] = float(hdu['EVENTS'].header['RA_OBJ'])
+		if self.param['barycorr_DEC_deg'] == "None":
+			self.param['barycorr_DEC_deg'] = float(hdu['EVENTS'].header['DEC_OBJ'])
+		print(self.param['barycorr_RA_deg'])
+		print(self.param['barycorr_DEC_deg'])		
+
 		baryevt = '%s/ni%s_0mpu7_cl_bary.evt' % (suboutdir,self.obsid)
 		fcmd = '%s/barycorr_%s.sh' % (suboutdir,self.obsid)
 		flog = '%s/barycorr_%s.log' % (suboutdir,self.obsid)
