@@ -41,7 +41,10 @@ def show_nicer_target_segment_sheet(csvfile,target_name=None,obsid=None):
 	df = pd.read_csv(csvfile,comment='#')
 	df['Observation ID'] = df['Observation ID'].astype(str).str.zfill(10)
 	if target_name != None:
-		print(df[['Target Name','Observation ID','Start TimeUTC','Good Expo[s]']][df['Target Name'] == target_name])
+		#print(df[['Target Name','Observation ID','Start TimeUTC','Good Expo[s]']][df['Target Name'] == target_name])		
+		for index, row in df.iterrows():
+			if target_name in row['Target Name']:
+				print(row['Target Name'],row['Observation ID'],row['Start TimeUTC'],row['Good Expo[s]'])
 	elif obsid != None:		
 		print(df[['Target Name','Observation ID','Start TimeUTC','Good Expo[s]']][df['Observation ID'] == obsid])		
 	else:
