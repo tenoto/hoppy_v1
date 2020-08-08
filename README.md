@@ -38,6 +38,13 @@ hoppy/nicer
 ├── nievent.py
 ```
 
+* nicer.py: main library of the NICER data analysis framework. The "NicerElf" class is organizign the framwork. There are two main calsses NicerObsID and NicerGTI. 
+* nipipeline.py: command line to run the nicer.py process.
+* niwget.py
+* niget_yyyymm.py
+* nishow_target_segment_sheet.py
+* niget_target_segment_sheet.py 
+
 ## Files and Libraries
 * hoppy
     * nicer 
