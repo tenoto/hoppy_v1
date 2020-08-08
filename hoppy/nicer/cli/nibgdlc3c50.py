@@ -90,6 +90,10 @@ def run(args):
 		cmd = 'fconv_txt2gti.py -i %s -o %s ' % (fgti_txt,fgti_fits)
 		print(cmd);os.system(cmd)
 		
+		fgti_clevt = '%s/clevt.evt' % subdir
+		cmd = 'xselect_gtifilter.py -i %s -g %s -o %s' % (args.clfile, fgti_fits, fgti_clevt)
+		print(cmd);os.system(cmd)
+
 def main(args=None):
 	parser = get_parser()
 	args = parser.parse_args(args)
