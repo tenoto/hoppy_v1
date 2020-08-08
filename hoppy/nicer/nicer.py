@@ -6,6 +6,7 @@ import glob
 import yaml 
 import pandas as pd
 import inspect
+from time import sleep
 
 from astropy.io import fits
 from astropy.time import Time
@@ -20,6 +21,7 @@ class NicerObsID():
 
 		self.setup_yamlfile = '%s/ni%s_result.yaml' % (self.outdir,self.obsid)
 		self.have_event_files()
+		sleep(1) # this is needed, otherwise sometimes flag_clevt_has_events can not be ste.
 
 	def dump_setup_to_yamlfile(self):
 		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
@@ -125,8 +127,8 @@ class NicerObsID():
 		dump += 'bkgidxdir=\'%s\' ' % self.param['nibackgen3c50_bkgidxdir']
 		dump += 'bkglibdir=\'%s\' ' % self.param['nibackgen3c50_bkgidxdir']	
 		dump += 'gainepoch=\'%s\' ' % self.param['nibackgen3c50_gainepoch']
-		dump += 'totspec=\'./%s\' ' % (totspec_name)
-		dump += 'bkgspec=\'./%s\' ' % (bkgspec_name)
+		dump += 'totspec=\'%s\' ' % (totspec_name)
+		dump += 'bkgspec=\'%s\' ' % (bkgspec_name)
 		dump += 'dtmin=%.1f dtmax=%.1f hbgcut=%.1f ' % (
 			self.param['nibackgen3c50_dtmin'],
 			self.param['nibackgen3c50_dtmax'],
@@ -151,11 +153,15 @@ class NicerObsID():
 			self.flag_exists_totspec = True
 		else:
 			self.flag_exists_totspec = False
+			print("spectral file %s was not generated." % totspec_name)
+			return -1
 
 		if os.path.exists(bkgspec_name+'.pi'):
 			self.flag_exists_bkgspec = True
 		else:
 			self.flag_exists_bkgspec = False
+			print("spectral file %s was not generated." % bkgspec_name)
+			return -1			
 
 		cmd = 'mv %s*.pi %s*.pi %s' % (totspec_name,bkgspec_name,suboutdir)
 		print(cmd);os.system(cmd)		
@@ -359,13 +365,219 @@ class NicerObsID():
 			gti_basename = 'ni%s_0mpu7_cl_gti%03d' % (self.obsid,gtinum)
 			cmd += 'mv %s.{evt,gti} %s\n' % (gti_basename,gti_dir)
 			print(cmd);os.system(cmd)
-			#gti_fits = '%s/%s.gti' % (gti_dir,gti_basename)
-			#gti_clevt = '%s/%s.evt' % (gti_dir,gti_basename)
 
-			#gti_hdu = fits.open(gti_clevt)
-			#if len(gti_hdu['EVENTS'].data) == 0:
-			#	print("no event.")
-			#	continue		
+			nigti = NicerGTI(self,gtinum,gti_dir,gti_basename)
+			if len(nigti.gti_hdu['EVENTS'].data) == 0:
+				print("... No event. skip.")
+				continue
+
+			nigti.set_title()
+			if nigti.nbint > 0: nigti.plot_lightcurve()
+			nigti.run_nibackgen3C50()
+
+class NicerGTI():
+	def __init__(self,parent_nicerobsid,gtinum,gti_dir,gti_basename):
+		self.parent_nicerobsid = parent_nicerobsid
+		self.gtinum = gtinum; 
+		self.gti_dir = gti_dir
+		self.gti_basename = gti_basename
+		print("\n[NicerGTI %d] A new NicerGTI is generated from a parent NicerObdID %s" % (
+			self.gtinum,self.parent_nicerobsid.obsid))
+
+		self.obsid = self.parent_nicerobsid.obsid
+		self.param = self.parent_nicerobsid.param
+
+		self.gti_fits = '%s/%s.gti' % (self.gti_dir,self.gti_basename)
+		self.gti_clevt = '%s/%s.evt' % (self.gti_dir,self.gti_basename)
+		self.gti_hdu = fits.open(self.gti_clevt)
+
+	def set_title(self):
+		print("\n[NicerGTI %s/%s] %s" % (self.gtinum,self.obsid,sys._getframe().f_code.co_name))
+
+		self.tstart = float(self.gti_hdu['GTI'].data[0][0])
+		self.tstop = float(self.gti_hdu['GTI'].data[0][1])
+		self.exposure = self.tstop - self.tstart
+		self.nbint = round(self.exposure/float(self.param['lc_time_bin_sec']))
+		self.title = 'ObsID:%s GTI:%003d MJD:%.2f-%.2f (%.1f s)' % (
+			self.obsid,self.gtinum,self.tstart,self.tstop,self.exposure)
+
+	def plot_lightcurve(self):
+		print("\n[NicerGTI %s/%s] %s" % (self.gtinum,self.obsid,sys._getframe().f_code.co_name))
+
+		cmd = '\n'
+		for eband in self.param['lc_energy_bands']:
+			emin,emax = self.param['lc_energy_bands'][eband]
+			fenesel = '%s/ni%s_0mpu7_cl_gti%03d_%s.evt' % (self.gti_dir,self.obsid,self.gtinum,eband)
+			cmd += "fselect_energy.py %s %s %.1f %.1f\n" % (self.gti_clevt,fenesel,emin,emax)
+		print(cmd);os.system(cmd)			
+
+		fcmd = '%s/ni%s_0mpu7_cl_gti%03d_ene.sh' % (self.gti_dir,self.obsid,self.gtinum)
+		flog = '%s/ni%s_0mpu7_cl_gti%03d_ene.log' % (self.gti_dir,self.obsid,self.gtinum)
+		psfile = '%s/ni%s_0mpu7_cl_gti%03d_ene.ps' % (self.gti_dir,self.obsid,self.gtinum)
+		f = open(fcmd,'w')
+		dump  = '#!/bin/sh -f\n'
+
+		flcfile = '%s/ni%s_0mpu7_cl_gti%03d_ene.flc' % (self.gti_dir,self.obsid,self.gtinum)
+		dump += 'lcurve nser=%d ' % len(self.param['lc_energy_bands'])
+		i = 1
+		for eband in self.param['lc_energy_bands']:
+			fenesel = '%s/ni%s_0mpu7_cl_gti%03d_%s.evt' % (self.gti_dir,self.obsid,self.gtinum,eband)
+			dump += 'cfile%d="%s" ' % (i,fenesel)
+			i += 1 
+		dump += 'window="-" ' 
+		dump += 'dtnb=%d ' % self.param['lc_time_bin_sec']
+		dump += 'nbint=%d ' % self.nbint
+		dump += 'outfile="%s" ' % flcfile 
+		dump += 'plotdnum=%s ' % len(self.param['lc_energy_bands'])
+		dump += 'plot=yes plotdev="/xw" <<EOF\n'
+		dump += 'lwid 5\n'
+		dump += 'la ot %s\n' % self.title 
+		dump += 'lab rotate\n'
+		dump += 'lab pos y 2.8\n'
+		i = 2
+		for eband in self.param['lc_energy_bands']:
+			emin,emax = self.param['lc_energy_bands'][eband]		
+			dump += 'lab y%d %.1f-%.1f keV\n' % (i,emin,emax)
+			dump += 'col %d on %d\n' % (i,i)
+			i += 1 
+		dump += 'hard %s/cps\n' % psfile
+		dump += 'quit\n'
+		dump += 'EOF'
+		print(dump)
+		f.write(dump)
+		f.close()	
+
+		# run the script.
+		cmd  = 'chmod +x %s\n' % fcmd
+		cmd += './%s' % fcmd
+		print(cmd)
+		os.system(cmd)
+
+		cmd  = "ps2pdf %s\n" % psfile
+		cmd += "rm -f %s\n" % psfile
+		cmd += "mv %s.pdf %s\n" % (os.path.splitext(os.path.basename(psfile))[0],self.gti_dir)
+		print(cmd)
+		os.system(cmd)
+
+	def run_nibackgen3C50(self):
+		print("\n[NicerGTI %s/%s] %s" % (self.gtinum,self.obsid,sys._getframe().f_code.co_name))
+
+		self.gti_ufaevt = '%s/ni%s_0mpu7_ufa_gti%03d.evt' % (self.gti_dir,self.obsid,self.gtinum)
+
+		cmd = 'rm -f xselect.log'
+		print(cmd);os.system(cmd)
+
+		cmd  = 'xselect<<EOF\n'
+		cmd += 'xsel\n'
+		cmd += 'read event %s ./\n' % self.parent_nicerobsid.ufaevt
+		cmd += 'yes\n'
+		cmd += 'filter time file\n'
+		cmd += '%s\n' % self.gti_fits
+		cmd += 'extract event\n'
+		cmd += 'save event %s\n' % self.gti_ufaevt
+		cmd += 'yes\n'
+		cmd += 'exit\n'
+		cmd += 'no\n'
+		cmd += 'exit\n'	
+		cmd += 'EOF\n'
+		print(cmd);os.system(cmd)	
+
+		cmd = 'rm -f tmp_gti.txt xselect.log xsel_timefile.asc'
+		print(cmd);os.system(cmd)
+
+		# ============================================
+
+		self.totspec_name = 'ni%s_gti%03d_3c50_tot' % (self.obsid,self.gtinum)
+		self.bkgspec_name = 'ni%s_gti%03d_3c50_bkg' % (self.obsid,self.gtinum)
+		self.totspec = '%s/%s.pi' % (self.gti_dir,self.totspec_name)
+		self.bkgspec = '%s/%s.pi' % (self.gti_dir,self.bkgspec_name)
+		# prepare a script for nicerl2 for each ObsID
+		fcmd = '%s/nibackgen3C50_%s_gti%03d.sh' % (self.gti_dir,self.obsid,self.gtinum)
+		flog = '%s/nibackgen3C50_%s_gti%03d.log' % (self.gti_dir,self.obsid,self.gtinum)
+		f = open(fcmd,'w')
+		dump  = '#!/bin/sh -f\n'
+		dump += 'nibackgen3C50 '
+		dump += 'rootdir=\'NONE\' '
+		dump += 'obsid=\'NONE\' ' 
+		dump += 'calevtdir=\'NONE\' ' 
+		dump += 'bkgidxdir=\'%s\' ' % self.param['nibackgen3c50_bkgidxdir']
+		dump += 'bkglibdir=\'%s\' ' % self.param['nibackgen3c50_bkgidxdir']	
+		dump += 'gainepoch=\'%s\' ' % self.param['nibackgen3c50_gainepoch']
+		dump += 'clfile=\'%s\' ' % self.gti_clevt		
+		dump += 'ufafile=\'%s\' ' % self.gti_ufaevt
+		dump += 'totspec=\'%s/%s\' ' % (self.gti_dir,self.totspec_name)
+		dump += 'bkgspec=\'%s/%s\' ' % (self.gti_dir,self.bkgspec_name)
+		dump += 'dtmin=%.1f dtmax=%.1f hbgcut=%.1f ' % (self.param['nibackgen3c50_dtmin'],self.param['nibackgen3c50_dtmax'],self.param['nibackgen3c50_hbgcut'])
+		dump += '> %s 2>&1 ' % flog
+		dump += '\n'
+		f.write(dump)
+		f.close()	
+
+		try:
+			# run the script.
+			cmd  = 'chmod +x %s\n' % fcmd
+			cmd += './%s' % fcmd
+			print(cmd);os.system(cmd)	
+		except:
+			f = open(flog,'w')
+			message = "nibackgen3c50 failed at gti %d (e.g., 'Error of no events in new cleaned event file')" % self.gtinum
+			print(message)
+			f.write(message)
+			f.close()
+			return -1
+
+		if not (os.path.exists(self.totspec) and os.path.exists(self.bkgspec)):
+			f = open(flog,'w')
+			message = "nibackgen3c50 failed at gti %d (e.g., 'Error of no events in new cleaned event file')" % self.gtinum
+			print(message)
+			f.write(message)
+			f.close()
+			return -1			
+
+		cmd  = 'fparkey %s %s RESPFILE\n' % (self.param['xspec_rmf'],self.totspec)
+		cmd += 'fparkey %s %s ANCRFILE\n' % (self.param['xspec_arf'],self.totspec)
+		#cmd += 'fparkey %s %s BACKFILE\n' % (bkgspec,totspec)
+		cmd += 'fparkey %s %s RESPFILE\n' % (self.param['xspec_rmf'],self.bkgspec)
+		cmd += 'fparkey %s %s ANCRFILE\n' % (self.param['xspec_arf'],self.bkgspec)
+		print(cmd);os.system(cmd)
+
+		hdu = fits.open(self.totspec)
+		keyword_dateobs = hdu[0].header['DATE-OBS']
+		keyword_object = hdu[0].header['OBJECT']		
+		keyword_exposure = hdu[0].header['EXPOSURE']			
+		title = '%s ObsID:%s GTI:%03d (%s, %.1f sec)' % (keyword_object, self.obsid, self.gtinum, keyword_dateobs,keyword_exposure)
+
+		fspec = "ni%s_tot_spec" % self.obsid
+		cmd  = "xspec <<EOF\n"
+		cmd += "data 1 %s\n" % (self.totspec)
+		cmd += "back 1 %s\n" % (self.bkgspec)
+		cmd += "data 2 %s\n" % (self.bkgspec)
+		cmd += "data 3 %s\n" % (self.totspec)	
+		cmd += "back 3 none\n"
+		cmd += "setplot energy\n"
+		cmd += "setplot rebin %d %d\n" % (self.param['xspec_rebin_sigma'],self.param['xspec_rebin_maxnum'])
+		cmd += "ignore 1-3:**-%.1f,%.1f-**\n" % (self.param['xspec_emin'],self.param['xspec_emax'])
+		cmd += "iplot %s\n" % self.param['xspec_plot_type']
+		cmd += "time off\n"
+		cmd += "lwid 5\n"
+		cmd += "lwid 5 on 1..3\n"
+		cmd += "la t %s\n" % title
+		cmd += "r x %.1f %.1f\n" % (self.param['xspec_emin'],self.param['xspec_emax'])
+		#cmd += "r y 1e-4 100.0\n"
+		cmd += "r y %.1f %.1f\n" % (self.param['xspec_ymin'],self.param['xspec_ymax'])
+		cmd += "hard %s.ps/cps\n" % fspec
+		cmd += "exit\n"
+		cmd += "exit\n"
+		cmd += "EOF\n"
+		print(cmd)
+		os.system(cmd)
+
+		cmd  = "ps2pdf %s.ps\n" % fspec
+		cmd += "rm -f %s.ps\n" % fspec
+		cmd += "mv %s.pdf %s/\n" % (fspec,self.gti_dir)
+		print(cmd)
+		os.system(cmd)
+
 
 class NicerElf():
 	def __init__(self,setup_yamlfile,obsid_lstfile):
@@ -385,6 +597,8 @@ class NicerElf():
 			if obsid in ['#','%']:
 				print('...comment out and skip the line: %s' % line)
 				continue 
+			elif obsid == 'exit':
+				break
 			elif len(glob.glob('%s/%s' % (self.param["input_data_directory"],obsid))) == 0:
 				print('...no directory and skip obsid: %s' % obsid)
 				continue
@@ -397,31 +611,49 @@ class NicerElf():
 
 	def make_directory(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_make_directory']:
+			print("skip ... since flag_make_directory is %s" % self.param['flag_make_directory']) 
+			return 0		
 		for niobsid in self.nicerobs_lst:
 			niobsid.make_directory()
 
 	def run_nicerl2(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_run_nicerl2']:
+			print("skip ... since flag_run_nicerl2 is %s" % self.param['flag_run_nicerl2']) 
+			return 0			
 		for niobsid in self.nicerobs_lst:
 			niobsid.run_nicerl2()
 
 	def run_nibackgen3C50(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_run_nibackgen3C50']:
+			print("skip ... since flag_run_nibackgen3C50 is %s" % self.param['flag_run_nibackgen3C50']) 
+			return 0			
 		for niobsid in self.nicerobs_lst:
 			niobsid.run_nibackgen3C50()
 
 	def plot_lightcurve(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_plot_lightcurve']:
+			print("skip ... since flag_plot_lightcurve is %s" % self.param['flag_plot_lightcurve']) 
+			return 0			
 		for niobsid in self.nicerobs_lst:
 			niobsid.plot_lightcurve()
 
 	def run_barycorr(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_run_barycorr']:
+			print("skip ... since flag_run_barycorr is %s" % self.param['flag_run_barycorr']) 
+			return 0			
 		for niobsid in self.nicerobs_lst:
 			niobsid.run_barycorr()
 
 	def devide_to_gti(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_devide_to_gti']:
+			print("skip ... since flag_devide_to_gti is %s" % self.param['flag_devide_to_gti']) 
+			return 0		
 		for niobsid in self.nicerobs_lst:
 			niobsid.devide_to_gti()
 
