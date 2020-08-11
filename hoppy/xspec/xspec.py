@@ -355,13 +355,14 @@ class XspecPha():
 		for line in open(self.flog_fit):
 			cols = line.split()
 			if flag_show_pa and len(cols) > 1:
-				if cols[1] == str(parnum):
+				if str(cols[1]) == str(parnum):
 					value = float(cols[-3])
 					break
 			if "#Parameters defined:" in line:
 				flag_show_pa = True
 		if not flag_show_pa:
 			value = np.nan				
+
 
 		flag_err = False
 		for line in open(tmp_log):
@@ -408,8 +409,8 @@ class XspecPha():
 
 		self.fitlog = XspecFitLog(self.flog_fit)		
 		self.chisquare = self.fitlog.get_chisquare()
-		self.reduced_chisquare = self.fitlog.get_reduced_chisquare()
 		self.dof = self.fitlog.get_dof()
+		self.reduced_chisquare = self.fitlog.get_reduced_chisquare()		
 		self.probability = self.fitlog.get_probability()
 
 		print(self.chisquare)
@@ -450,19 +451,23 @@ class XspecFitLog():
 			quit()
 
 	def get_chisquare(self):
-		self.chisquare = grep(self.logfile,"#Test statistic : Chi-Squared =",5)[-1]
+		#self.chisquare = grep(self.logfile,"#Test statistic : Chi-Squared =",5)[-1]
+		self.chisquare = grep(self.logfile,"#Test statistic :",4)[-1]
 		return self.chisquare
 
 	def get_reduced_chisquare(self):
-		self.reduced_chisquare = grep(self.logfile,"# Reduced chi-squared =",4)[-1]
+		#self.reduced_chisquare = grep(self.logfile,"# Reduced chi-squared =",4)[-1]
+		self.reduced_chisquare = self.chisquare / float(self.dof)
 		return self.reduced_chisquare
 
 	def get_dof(self):
-		self.dof = grep(self.logfile,"# Reduced chi-squared =",6,dtype=int)[-1]
+		#self.dof = grep(self.logfile,"# Reduced chi-squared =",6,dtype=int)[-1]
+		self.dof = grep(self.logfile,"# Null hypothesis probability of",7,dtype=int)[-1]
 		return self.dof		
 
 	def get_probability(self):
-		self.probability = grep(self.logfile,"# Null hypothesis probability =",5)[-1]
+		#self.probability = grep(self.logfile,"# Null hypothesis probability =",5)[-1]		
+		self.probability = grep(self.logfile,"# Null hypothesis probability of",5,dtype=float)[-1]				
 		return self.probability		
 
 

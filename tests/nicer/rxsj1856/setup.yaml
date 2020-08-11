@@ -1,17 +1,17 @@
-flag_make_directory: False
-flag_run_nicerl2: False
-flag_run_nibackgen3C50: False
-flag_plot_lightcurve: False
-flag_run_barycorr: False
-flag_devide_to_gti: False
-output_directory: 'out/bkgd_rxte'
+flag_make_directory: True
+flag_run_nicerl2: True
+flag_run_nibackgen3C50: True
+flag_plot_lightcurve: True
+flag_run_barycorr: True
+flag_devide_to_gti: True
 input_data_directory: '/Users/enoto/work/repository/heasarc/data/nicer/data/obs/*' #this should be the asolute path.
+output_directory: 'out/nstarlib/RX_J1856.4-375'
 nicerl2_gcalfile: '/Users/enoto/work/soft/heasoft/nicer/nibackgen3c50/develop/202007_RGv6/nixtiflightpi20170601v003_optmv10.fits'
 nibackgen3c50_gainepoch: '2020'
 nibackgen3c50_bkgidxdir: '/Users/enoto/work/soft/heasoft/nicer/nibackgen3c50/develop/202007_RGv6/bg_models_3C50'
-nibackgen3c50_dtmin: 20.0 
-nibackgen3c50_dtmax: 60.0 
-nibackgen3c50_hbgcut: 0.5 
+nibackgen3c50_dtmin: 10.0 
+nibackgen3c50_dtmax: 120.0 
+nibackgen3c50_hbgcut: 0.1 
 xspec_rmf: 'resp/nicer-rmf6s-teamonly-array50_wo14_34.rmf'
 xspec_arf: 'resp/nicer-consim135p-teamonly-array50_wo14_34.arf'
 xspec_rebin_sigma: 3

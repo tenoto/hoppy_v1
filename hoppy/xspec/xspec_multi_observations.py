@@ -86,6 +86,7 @@ class MonitoringManager():
 				list_flag_fit.append(1)
 			except:
 				print("can not fit ... skip")
+				print(xspec_pha)
 				flag_fit = False
 				list_flag_fit.append(0)				
 
@@ -145,6 +146,7 @@ class MonitoringManager():
 		self.df_add = pd.DataFrame(add_dictionary,
 			columns=(["flag_fit"]+add_column_names+add_column_names_rate+add_column_names_flux+add_column_names_par))
 		self.df_new = self.df.join([self.df_add])
+		self.df_new = self.df		
 		self.df_new.to_csv(self.outcsvfile)
 
 if __name__=="__main__":
