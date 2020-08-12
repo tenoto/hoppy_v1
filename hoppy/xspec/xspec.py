@@ -5,6 +5,7 @@ import sys
 import yaml
 import glob 
 import pandas as pd
+import numpy as np
 import astropy.io.fits as fits 
 import astropy.time as asttime 
 
