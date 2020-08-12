@@ -1,2 +1,0 @@
-ni1200250101,data/ni1200250101_o1u20cut_clscr_gtisel.pha,data/ni1200250101_o1u20cut_BGMod_3C50.pha,data/nicer_v1.02.rmf,data/ni_xrcall_onaxis_v1.02_wo_detid14_34.arf
-ni1200250102,data/ni1200250102_o1u20cut_clscr_gtisel.pha,data/ni1200250102_o1u20cut_BGMod_3C50.pha,data/nicer_v1.02.rmf,data/ni_xrcall_onaxis_v1.02_wo_detid14_34.arf

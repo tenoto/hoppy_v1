@@ -2,10 +2,10 @@
 
 import os 
 import sys 
-import yaml 
-import argparse 
-import numpy as np
-import astropy.io.fits as pyfits 
+import yaml
+import glob 
+import pandas as pd
+import astropy.io.fits as fits 
 import astropy.time as asttime 
 
 def string_to_list(string):
@@ -17,6 +17,17 @@ def string_to_list(string):
 		mainlist.append(sublist)
 	return mainlist
 
+def grep(logfile,keyword,colnum,dtype=float):
+	out_word_list = []
+	for line in open(logfile):
+		if keyword in line:
+			cols = line.split()
+			if dtype == float:
+				out_word_list.append(float(cols[colnum]))
+			elif dtype == int:
+				out_word_list.append(int(cols[colnum]))				
+	return out_word_list
+
 class XspecPha():
 	def __init__(self,phafile,outdir='out',
 		backgrnd=None,rmffile=None,arffile=None,modelxcm=None,
@@ -26,6 +37,8 @@ class XspecPha():
 		ratebands=[[0.4,6.0],[1.0,10.0]],
 		fluxbands=[[0.4,6.0],[1.0,10.0]],
 		parerrnum=[1,2,5]):
+		print("\n[XspecPha] %s" % (sys._getframe().f_code.co_name))
+
 		self.phafile = phafile
 		self.outdir = outdir 
 		self.backgrnd = backgrnd
@@ -44,9 +57,23 @@ class XspecPha():
 		self.plotymaxeeuf = plotymaxeeuf		
 		self.ploty2min = ploty2min
 		self.ploty2max = ploty2max
-		self.ratebands = ratebands
-		self.fluxbands = fluxbands
-		self.parerrnum = parerrnum
+
+		self.flag_fit_complete = False
+
+		if type(ratebands) == list:
+			self.ratebands = ratebands
+		elif type(ratebands) == str:
+			self.ratebands = string_to_list(ratebands)
+
+		if type(fluxbands) == list:
+			self.fluxbands = fluxbands
+		elif type(fluxbands) == str:
+			self.fluxbands = string_to_list(fluxbands)		
+
+		if type(parerrnum) == list:
+			self.parerrnum = parerrnum
+		elif type(fluxbands) == str:
+			self.parerrnum = string_to_list(parerrnum)	
 
 		if not os.path.exists(self.phafile):
 			sys.stderr.write('phafile %s does not exist.' % self.phafile)
@@ -61,15 +88,27 @@ class XspecPha():
 		cmd = 'cp %s %s' % (self.phafile,self.outdir)
 		print(cmd);os.system(cmd)
 		self.phafile = '%s/%s' % (self.outdir,os.path.basename(self.phafile))
+
+		if self.rmffile != None:
+			cmd = "fparkey %s %s+1 RESPFILE" % (self.rmffile,self.phafile)
+			print(cmd);os.system(cmd)
+		if self.arffile != None:
+			cmd = "fparkey %s %s+1 ANCRFILE" % (self.arffile,self.phafile)
+			print(cmd);os.system(cmd)		
+
 		if self.backgrnd != None:
 			cmd = 'cp %s %s' % (self.backgrnd,self.outdir)
 			print(cmd);os.system(cmd)
 			self.backgrnd = '%s/%s' % (self.outdir,os.path.basename(self.backgrnd))
 
+		self.basename = '%s_s%dn%d' % (
+			os.path.basename(self.phafile).replace('.pha',''),
+			self.binminsig, self.binmaxbin)
+
 	def get_phafile_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
 
-		self.hdu_pha = pyfits.open(self.phafile)
+		self.hdu_pha = fits.open(self.phafile)
 		self.header = self.hdu_pha['SPECTRUM'].header
 		self.OBSID = self.header['OBS_ID']		
 		self.DATEOBS = self.header['DATE-OBS']
@@ -86,8 +125,8 @@ class XspecPha():
 		self.TSTART = self.header['TSTART']
 		self.TSTOP = self.header['TSTOP']	
 
-		self.MJD_DATEOBS = asttime.Time(self.DATEOBS,format='isot', scale='utc').mjd	
-		self.MJD_DATEEND = asttime.Time(self.DATEEND,format='isot', scale='utc').mjd
+		self.MJD_DATEOBS = float(asttime.Time(self.DATEOBS,format='isot', scale='utc').mjd)
+		self.MJD_DATEEND = float(asttime.Time(self.DATEEND,format='isot', scale='utc').mjd)
 
 	def show_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -136,14 +175,18 @@ class XspecPha():
 		for i in range(len(self.ratebands)):
 			emin = self.ratebands[i][0]
 			emax = self.ratebands[i][1]
-			self.ratelist.append(self.get_rate_and_error(emin,emax))
+			rate, rate_error = self.get_rate_and_error(emin,emax)
+			self.ratelist.append([rate,rate_error])
+
+			keyword = "rate_%sto%skeV" % (str(emin).replace('.','p'),str(emax).replace('.','p'))
+			setattr(self, keyword, rate)
+			keyword = "rate_%sto%skeV_err" % (str(emin).replace('.','p'),str(emax).replace('.','p'))
+			setattr(self, keyword, rate_error)			
 
 	def bin_spec(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
 
-		self.basename = '%s_s%dn%d' % (
-			os.path.basename(self.phafile).replace('.pha',''),
-			self.binminsig, self.binmaxbin)
+
 		grp_qdp = '%s.qdp' % self.basename
 		grp_pco = '%s.pco' % self.basename		
 		grp_pha = '%s.pha' % self.basename
@@ -181,7 +224,7 @@ class XspecPha():
 
 		f = open(self.readxcm,'w')
 		dump  = 'setplot device tmp/null\n'
-		dump += 'data 1 %s\n' % self.phafile
+		dump += 'data 1 %s\n' % self.phafile	
 		if self.backgrnd != None:
 			dump += 'back 1 %s\n' % self.backgrnd
 		dump += 'resp 1 %s\n' % self.rmffile
@@ -332,7 +375,15 @@ class XspecPha():
 		for i in range(len(self.fluxbands)):
 			emin = self.fluxbands[i][0]
 			emax = self.fluxbands[i][1]
-			self.fluxlist.append(self.get_flux(self.fxcm_fit,emin,emax))
+			flux, flux_error_min, flux_error_max = self.get_flux(self.fxcm_fit,emin,emax)
+			self.fluxlist.append([flux, flux_error_min, flux_error_max])
+
+			keyword = "flux_%sto%skeV" % (str(emin).replace('.','p'),str(emax).replace('.','p'))
+			setattr(self, keyword, flux)
+			keyword = "flux_%sto%skeV_err_min" % (str(emin).replace('.','p'),str(emax).replace('.','p'))
+			setattr(self, keyword, flux_error_min)	
+			keyword = "flux_%sto%skeV_err_max" % (str(emin).replace('.','p'),str(emax).replace('.','p'))
+			setattr(self, keyword, flux_error_max)				
 
 	def get_parerror(self,fitxcm,parnum):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -388,7 +439,15 @@ class XspecPha():
 
 		self.parerrorlist = []
 		for parnum in self.parerrnum:
-			self.parerrorlist.append(self.get_parerror(self.fxcm_fit,parnum))
+			value, err_min, err_max = self.get_parerror(self.fxcm_fit,parnum)
+			self.parerrorlist.append([value, err_min, err_max])
+
+			keyword = "par_%d" % parnum
+			setattr(self, keyword, value)
+			keyword = "par_%d_err_min" % parnum
+			setattr(self, keyword, err_min)	
+			keyword = "par_%d_err_max" % parnum
+			setattr(self, keyword, err_max)				
 
 	def dump_yamlfile(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -418,6 +477,9 @@ class XspecPha():
 		print(self.dof)
 		print(self.probability)
 
+	def set_flag_complete(self):
+		self.flag_fit_complete = True
+
 	def run(self):
 		self.get_phafile_property()
 		self.get_rate_list()
@@ -430,18 +492,8 @@ class XspecPha():
 		self.analyze_fitlog()
 		self.get_flux_list()
 		self.get_parerror_list()
+		self.set_flag_complete()
 		self.dump_yamlfile()
-
-def grep(logfile,keyword,colnum,dtype=float):
-	out_word_list = []
-	for line in open(logfile):
-		if keyword in line:
-			cols = line.split()
-			if dtype == float:
-				out_word_list.append(float(cols[colnum]))
-			elif dtype == int:
-				out_word_list.append(int(cols[colnum]))				
-	return out_word_list
 
 class XspecFitLog():
 	def __init__(self, logfile):
@@ -470,90 +522,146 @@ class XspecFitLog():
 		self.probability = grep(self.logfile,"# Null hypothesis probability of",5,dtype=float)[-1]				
 		return self.probability		
 
+class CSVtoXSPEC():
+	def __init__(self,filelist,yamlfile):
+		self.filelist = filelist
+		self.yamlfile = yamlfile
+
+		if not os.path.exists(self.filelist):
+			sys.stderr.write('file %s does not exist.' % self.filelist)
+			exit()
+		if not os.path.exists(self.yamlfile):
+			sys.stderr.write('file %s does not exist.' % self.yamlfile)
+			exit()			
+
+		self.param = yaml.load(open(self.yamlfile))
+
+	def make_csv2xspec(self,outcsvfile):
+		df = pd.read_csv(self.filelist,names=('data_id','phafile','backgrnd','rmffile','arffile'))
+		df["modelxcm"] = [self.param["modelxcm"] for i in range(len(df))]
+		df["binminsig"] = [self.param["binminsig"] for i in range(len(df))]
+		df["binmaxbin"] = [self.param["binmaxbin"] for i in range(len(df))]		
+		df["fitemin"] = [self.param["fitemin"] for i in range(len(df))]				
+		df["fitemax"] = [self.param["fitemax"] for i in range(len(df))]						
+		df["plotxmin"] = [self.param["plotxmin"] for i in range(len(df))]								
+		df["plotxmax"] = [self.param["plotxmax"] for i in range(len(df))]										
+		df["plotymin"] = [self.param["plotymin"] for i in range(len(df))]												
+		df["plotymax"] = [self.param["plotymax"] for i in range(len(df))]
+		df["plotymineeuf"] = [self.param["plotymineeuf"] for i in range(len(df))]												
+		df["plotymaxeeuf"] = [self.param["plotymaxeeuf"] for i in range(len(df))]																														
+		df["ploty2min"] = [self.param["ploty2min"] for i in range(len(df))]																
+		df["ploty2max"] = [self.param["ploty2max"] for i in range(len(df))]																		
+		#df["flagrun"] = [1 for i in range(len(df))]																				
+		print(df)
+
+		outdir = os.path.dirname(outcsvfile)
+		if not os.path.exists(outdir):
+			cmd = 'mkdir -p %s' % outdir
+			print(cmd);os.system(cmd)
+
+		df.to_csv(outcsvfile)
 
 
-	#def get_fitrange_rate(logfile):
-	#	for line in open(logfile):
-	#		cols = line.split()
-	#		if "#Net count rate" in line:
-	#			rate = float(cols[6])
-	#			rate_err = float(cols[8])
-	#			break
-	#	return rate, rate_err			
+class MonitoringManager():
+	def __init__(self,csvfile,yamlfile):
+		self.csvfile = csvfile 
+		self.yamlfile = yamlfile
 
-if __name__=="__main__":
+		if not os.path.exists(self.csvfile):
+			sys.stderr.write('error: file %s does not exist.\n' % self.csvfile)
+			exit()			
+		if not os.path.exists(self.yamlfile):
+			sys.stderr.write('error: file %s does not exist.\n' % self.yamlfile)
+			exit()						
+		print("csvfile: %s" % self.csvfile)
+		print("yamlfile: %s" % self.yamlfile)
 
-	sys.stdout.write('\n... run a single xspec fitting ...\n')
+		self.df = pd.read_csv(self.csvfile)
+		self.df = self.df.drop(columns='Unnamed: 0')
+		self.param = yaml.load(open(self.yamlfile))
 
-	parser = argparse.ArgumentParser(
-		prog=__file__,
-		usage='python %s phafile [-b backgrnd] [-r rmffile] [-a arffile] [-m modelxcm] [-s binminsig] [-n binmaxbin]' % os.path.basename(__file__),
-		description='Automatic Xspec fitting.',
-		epilog='',
-		add_help=True,
-		)
-	parser.add_argument(
-		'phafile',metavar='phafile',type=str,
-		help='source pha file for fitting.') 
-	parser.add_argument(
-		'-o','--outdir',metavar='outdir',type=str,default='out',
-		help='output directory.') 		
-	parser.add_argument(
-		'-b','--backgrnd',metavar='backgrnd',type=str,default=None,
-		help='background pha file for fitting.') 		
-	parser.add_argument(
-		'-r','--rmffile',metavar='rmffile',type=str,default=None,
-		help='rmffile for fitting.') 
-	parser.add_argument(
-		'-a','--arffile',metavar='arffile',type=str,default=None,
-		help='arffile for fitting.') 
-	parser.add_argument(
-		'-m','--modelxcm',metavar='modelxcm',type=str,default=None,
-		help='modelxcm for fitting.') 				
-	parser.add_argument(
-		'-s','--binminsig',metavar='binminsig',type=int,default=5,
-		help='binning minimum significance.') 					
-	parser.add_argument(
-		'-n','--binmaxbin',metavar='binmaxbin',type=int,default=50,
-		help='binning max bins.') 
-	parser.add_argument(
-		'--fitemin',metavar='fitemin',type=float,default=0.4,
-		help='fitting energy min (keV).') 								
-	parser.add_argument(
-		'--fitemax',metavar='fitemax',type=float,default=10.0,
-		help='fitting energy max (keV).') 	
-	parser.add_argument(
-		'--ratebands',metavar='ratebands',type=str,default=[[0.4,6.0],[1.0,10.0]],
-		help='rate energy bands (list) example:0.8-6.0,2.0-10.0 .') 											
-	parser.add_argument(
-		'--fluxbands',metavar='fluxbands',type=str,default=[[0.4,6.0],[1.0,10.0]],
-		help='flux energy bands (list) example:0.8-6.0,2.0-10.0 .') 	
-	parser.add_argument(
-		'--parerrnum',metavar='parerrnum',type=str,default=[1,2,5],
-		help='parameter error number list.') 																
-	args = parser.parse_args()	
-	print(args)
+		self.outcsvfile = '%s/%s' % (
+			self.param['outdir'],
+			os.path.basename(self.csvfile).replace('.csv','_fit.csv'))
+		print("out csvfile: %s" % self.outcsvfile)
 
-	if type(args.ratebands) == list:
-		ratebands = args.ratebands
-	elif type(args.ratebands) == str:
-		ratebands = string_to_list(args.ratebands)
+	def run_fit(self):
+		for index, dataset in self.df.iterrows():
+			outdir = '%s/%s' % (self.param['outdir'],dataset['data_id'])
+			xspec_pha = XspecPha(
+				phafile=dataset['phafile'],
+				outdir=outdir,
+				backgrnd=dataset['backgrnd'],
+				rmffile=dataset['rmffile'],
+				arffile=dataset['arffile'],
+				modelxcm=dataset['modelxcm'],
+				binminsig=dataset['binminsig'],binmaxbin=dataset['binmaxbin'],
+				fitemin=dataset['fitemin'],fitemax=dataset['fitemax'],
+				plotxmin=dataset['plotxmin'],plotxmax=dataset['plotxmax'],
+				plotymin=dataset['plotymin'],plotymax=dataset['plotymax'],
+				plotymineeuf=dataset['plotymineeuf'],plotymaxeeuf=dataset['plotymaxeeuf'],				
+				ploty2min=dataset['ploty2min'],ploty2max=dataset['ploty2max'],
+				ratebands=self.param['ratebands'],
+				fluxbands=self.param['fluxbands'],
+				parerrnum=self.param['parerrnum'])
+			try:				
+				xspec_pha.run()
+			except:
+				print("can not fit ... skip %s" % outdir)
 
-	if type(args.fluxbands) == list:
-		fluxbands = args.fluxbands
-	elif type(args.fluxbands) == str:
-		fluxbands = string_to_list(args.fluxbands)		
+	def collect_fitresults(self):	
+		add_column_names = [
+			"grp_pha",
+			"OBSID",
+			"DATEOBS",
+			"DATEEND",
+			"EXPOSURE",
+			"MJD_DATEOBS",
+			"MJD_DATEEND",
+			"OBJECT",
+			"TELESCOP",
+			"INSTRUME",
+			"MJDOBS",
+			"TSTART",
+			"TSTOP",
+			"fxcm_fit",
+			"title",
+			"chisquare",
+			"reduced_chisquare",
+			"dof",
+			"probability"
+			]
 
-	if type(args.parerrnum) == list:
-		parerrnum = args.parerrnum
-	elif type(args.fluxbands) == str:
-		parerrnum = string_to_list(args.parerrnum)	
+		for ebands in self.param['ratebands']:
+			add_column_names.append("rate_%sto%skeV" % (str(ebands[0]).replace('.','p'),str(ebands[1]).replace('.','p')))
+			add_column_names.append("rate_%sto%skeV_err" % (str(ebands[0]).replace('.','p'),str(ebands[1]).replace('.','p')))			
 
-	xspec_pha = XspecPha(args.phafile,
-		outdir=args.outdir,
-		backgrnd=args.backgrnd,rmffile=args.rmffile,arffile=args.arffile,modelxcm=args.modelxcm,
-		binminsig=args.binminsig,binmaxbin=args.binmaxbin,fitemin=args.fitemin,fitemax=args.fitemax,
-		ratebands=ratebands,fluxbands=fluxbands,parerrnum=parerrnum)
-	xspec_pha.run()
+		for ebands in self.param['fluxbands']:
+			add_column_names.append("flux_%sto%skeV" % (str(ebands[0]).replace('.','p'),str(ebands[1]).replace('.','p')))
+			add_column_names.append("flux_%sto%skeV_err_min" % (str(ebands[0]).replace('.','p'),str(ebands[1]).replace('.','p')))			
+			add_column_names.append("flux_%sto%skeV_err_max" % (str(ebands[0]).replace('.','p'),str(ebands[1]).replace('.','p')))						
 
+		for parnum in self.param['parerrnum']:
+			add_column_names.append("par_%d" % parnum)
+			add_column_names.append("par_%d_err_min" % parnum)
+			add_column_names.append("par_%d_err_max" % parnum)
+
+		add_dictionary = {}
+		for keyword in add_column_names:
+			add_dictionary[keyword] = []
+
+		for index, dataset in self.df.iterrows():
+			basename = os.path.splitext(os.path.basename(dataset['phafile']))[0]
+			fitresult_yamlfile = glob.glob('%s/%s/%s*.yaml' % (self.param['outdir'],dataset['data_id'],basename))[0]
+			fitresult = yaml.load(open(fitresult_yamlfile))
+			print("\n")
+			print(fitresult)
+
+			for keyword in add_column_names:
+				print(keyword)
+				add_dictionary[keyword].append(fitresult[keyword])
+		
+		self.df_add = pd.DataFrame(add_dictionary,columns=(add_column_names))
+		self.df_new = self.df.join([self.df_add])
+		self.df_new.to_csv(self.outcsvfile)
 
