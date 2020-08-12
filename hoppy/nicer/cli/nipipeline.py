@@ -12,7 +12,7 @@ def get_parser():
 	"""
 	Creates a new argument parser.
 	"""
-	parser = argparse.ArgumentParser('01_nicerl2.py',
+	parser = argparse.ArgumentParser('nipipeline.py',
 		formatter_class=argparse.RawDescriptionHelpFormatter,
 		description="""
 Run the nicerl2 command to a sequence of ObsIDs. 

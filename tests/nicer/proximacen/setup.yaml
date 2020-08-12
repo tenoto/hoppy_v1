@@ -9,9 +9,12 @@ output_directory: 'out/proximacen'
 nicerl2_gcalfile: '/Users/enoto/work/soft/heasoft/nicer/nibackgen3c50/develop/202007_RGv6/nixtiflightpi20170601v003_optmv10.fits'
 nibackgen3c50_gainepoch: '2020'
 nibackgen3c50_bkgidxdir: '/Users/enoto/work/soft/heasoft/nicer/nibackgen3c50/develop/202007_RGv6/bg_models_3C50'
-nibackgen3c50_dtmin: 20.0 
-nibackgen3c50_dtmax: 60.0 
-nibackgen3c50_hbgcut: 0.5 
+nibackgen3c50_dtmin: 10.0 
+nibackgen3c50_dtmax: 120.0 
+nibackgen3c50_hbgcut: 0.1
+#nibackgen3c50_dtmin: 20.0 
+#nibackgen3c50_dtmax: 60.0 
+#nibackgen3c50_hbgcut: 0.5 
 xspec_rmf: 'resp/nicer-rmf6s-teamonly-array50_wo14_34.rmf'
 xspec_arf: 'resp/nicer-consim135p-teamonly-array50_wo14_34.arf'
 xspec_rebin_sigma: 3

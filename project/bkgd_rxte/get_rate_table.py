@@ -37,7 +37,7 @@ for obsid_dir in glob.glob('%s/*' % indir):
 	bkg_pha = '%s/spec/ni%s_3c50_bkg.pi' % (obsid_dir,obsid)	
 
 	if not os.path.exists(src_pha) or not os.path.exists(bkg_pha):
-		f.write('%s error (file can not be found)' % obsid)
+		f.write('%s error (file can not be found)\n' % obsid)
 		continue
 
 	cmd = 'rm -rf tmp_xspec_rate'
