@@ -73,7 +73,7 @@ class XspecPha():
 		if type(parerrnum) == list:
 			self.parerrnum = parerrnum
 		elif type(fluxbands) == str:
-			self.parerrnum = string_to_list(parerrnum)	
+			self.parerrnum = [int(i) for i in parerrnum.split(",")]
 
 		if not os.path.exists(self.phafile):
 			sys.stderr.write('phafile %s does not exist.' % self.phafile)
@@ -101,9 +101,16 @@ class XspecPha():
 			print(cmd);os.system(cmd)
 			self.backgrnd = '%s/%s' % (self.outdir,os.path.basename(self.backgrnd))
 
-		self.basename = '%s_s%dn%d' % (
-			os.path.basename(self.phafile).replace('.pha',''),
-			self.binminsig, self.binmaxbin)
+		if os.path.splitext(self.phafile)[-1] == '.pha':
+			self.basename = '%s_s%dn%d' % (
+				os.path.basename(self.phafile).replace('.pha',''),
+				self.binminsig, self.binmaxbin)
+		elif os.path.splitext(self.phafile)[-1] == '.pi':
+			self.basename = '%s_s%dn%d' % (
+				os.path.basename(self.phafile).replace('.pi',''),
+				self.binminsig, self.binmaxbin)		
+
+		print(self.parerrnum,type(self.parerrnum))
 
 	def get_phafile_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)

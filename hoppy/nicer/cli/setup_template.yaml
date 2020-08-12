@@ -3,7 +3,7 @@ flag_run_nicerl2: True
 flag_run_nibackgen3C50: True
 flag_plot_lightcurve: True
 flag_run_barycorr: True
-flag_devide_to_gti: True
+flag_devide_to_gti: False
 input_data_directory: '/Users/enoto/work/repository/heasarc/data/nicer/data/obs/*' #this should be the asolute path.
 output_directory: 'template'
 nicerl2_gcalfile: '/Users/enoto/work/soft/heasoft/nicer/nibackgen3c50/develop/202007_RGv6/nixtiflightpi20170601v003_optmv10.fits'

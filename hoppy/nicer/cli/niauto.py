@@ -32,6 +32,8 @@ def get_parser():
 		help='setup yaml file')		
 	parser.add_argument('--heasarc_repository', '-r', type=str, default=os.getenv('HEADAS_REPOSITORY'),
 		help='Heasarc repository directory. If this option is specified, the files are moved here.')	
+	parser.add_argument('--copyto', '-t', type=str, default=' /Users/enoto/Dropbox/01_enoto/research/nicer/auto/out',
+		help='copy to')
 
 	return parser
 
@@ -53,27 +55,48 @@ def niauto(args):
 		print(cmd);os.system(cmd)
 
 	outdir = 'out/%s' % args.obsid
-	if os.path.exists(outdir):
-		print("output directory %s has already existed." % outdir)
-		exit()
+	if not os.path.exists(outdir):
+		cmd = 'mkdir -p %s;' % (outdir)
+		print(cmd);os.system(cmd)
 
-	cmd = 'mkdir -p %s;' % (outdir)
-	print(cmd);os.system(cmd)
+	specdir = 'out/%s/%s/spec' % (args.obsid,args.obsid)
+	if not os.path.exists(specdir):
+		param = yaml.load(open(args.setupfile))
+		param['output_directory'] = outdir
+		input_setup_yaml = '%s/input_setup.yaml' % outdir
+		with open(input_setup_yaml, 'w') as file:
+		    yaml.dump(param, file)
+		input_obsid_lst = '%s/input_obsid.lst' % outdir
+		f = open(input_obsid_lst,'w')
+		f.write('%s\n' % args.obsid)
+		f.close()
 
-	param = yaml.load(open(args.setupfile))
-	param['output_directory'] = outdir
-	input_setup_yaml = '%s/input_setup.yaml' % outdir
-	with open(input_setup_yaml, 'w') as file:
-	    yaml.dump(param, file)
-	input_obsid_lst = '%s/input_obsid.lst' % outdir
-	f = open(input_obsid_lst,'w')
-	f.write('%s\n' % args.obsid)
-	f.close()
+		cmd  = 'nipipeline.py '
+		cmd += '--setup_yamlfile %s ' % input_setup_yaml
+		cmd += '--obsid_lstfile %s ' % input_obsid_lst
+		print(cmd);os.system(cmd)
 
-	cmd  = 'nipipeline.py '
-	cmd += '--setup_yamlfile %s ' % input_setup_yaml
-	cmd += '--obsid_lstfile %s ' % input_obsid_lst
-	print(cmd);os.system(cmd)
+	fitdir = '%s/fit' % outdir
+	if not os.path.exists(fitdir):
+		param = yaml.load(open('%s/input_setup.yaml' % outdir))
+		model_xcm = '%s/hoppy/xspec/model/tbabs_bbodyrad.xcm' % (os.getenv('HOPPY_PATH'))
+		cmd  = 'xspec_fit.py '
+		cmd += '%s/ni%s_3c50_tot.pi ' % (specdir,args.obsid)
+		cmd += '-o %s/fit ' % (outdir)
+		cmd += '-b %s/ni%s_3c50_bkg.pi ' % (specdir,args.obsid)
+		cmd += '-r %s ' % param['xspec_rmf']
+		cmd += '-a %s ' % param['xspec_arf']
+		cmd += '-m %s ' % model_xcm
+		cmd += '-s 5 -n 80 --fitemin 0.3 --fitemax 10.0 '
+		cmd += '--rateband 0.8-6.0,2.0-10.0 '
+		cmd += '--fluxband 0.8-6.0,2.0-10.0 '
+		cmd += '--parerrnum "1,2,3" '
+		print(cmd);os.system(cmd)
+
+	if args.copyto != None:
+		cmd = 'mkdir -p %s/%s;' % (args.copyto,args.obsid)
+		cmd += 'cp -r %s %s/%s/' % (fitdir, args.copyto,args.obsid)
+		print(cmd);os.system(cmd)
 
 	print("finished...\n")
 
