@@ -1,5 +1,9 @@
 HOPPY (High-energy Observatory Pipelines via PYthon)
 ===
+
+
+[![hackmd-github-sync-badge](https://hackmd.io/KktKqjMbT3Gj3zNO0Jpk6w/badge)](https://hackmd.io/KktKqjMbT3Gj3zNO0Jpk6w)
+
 This package includes libararies and scripts for X-ray analyses of High-energy Observatory Pipelines of PYthon (HOPPY). 
 
 https://github.com/tenoto/hoppy
@@ -145,4 +149,5 @@ hoppy
 - PEP 8 -- Style Guide for Python Code https://www.python.org/dev/peps/pep-0008/?
 
 ## History
+- 2020-08-17 modified (Teruaki Enoto)
 - 2018-11-14 new version 0.1.0 is created for CLI interface using click.
