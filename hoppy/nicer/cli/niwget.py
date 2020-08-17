@@ -33,7 +33,7 @@ def get_parser():
 		help='target source name to be shown (default=None)')	
 	parser.add_argument('--csvfile', '-c', type=str, default="nicer_target_segment_table.csv", 
 		help='csvfile')		
-	parser.add_argument('--heasarc_repository', '-r', type=str, default=None,
+	parser.add_argument('--heasarc_repository', '-r', type=str, default=os.getenv('HEADAS_REPOSITORY'),
 		help='Heasarc repository directory. If this option is specified, the files are moved here.')	
 
 	return parser

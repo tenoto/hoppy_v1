@@ -187,9 +187,9 @@ def nibgdlc3c50(args):
 			cmd = 'rm -rf tmp_xspec_rate;\n'
 			os.system(cmd)
 			keyword = 'rate_src_cps_%.1f_%.1fkeV' % (emin,emax)
-			add_dictionary[keyword].append(rate_sub)
+			add_dictionary[keyword].append(rate_src)
 			keyword = 'rate_src_err_%.1f_%.1fkeV' % (emin,emax)			
-			add_dictionary[keyword].append(rate_sub_error)		
+			add_dictionary[keyword].append(rate_src_error)		
 
 			xspec_pha = xspec.XspecPha(bkgspec,
 				outdir='tmp_xspec_rate',backgrnd=None,
@@ -199,9 +199,9 @@ def nibgdlc3c50(args):
 			cmd = 'rm -rf tmp_xspec_rate;\n'
 			os.system(cmd)
 			keyword = 'rate_bkg_cps_%.1f_%.1fkeV' % (emin,emax)
-			add_dictionary[keyword].append(rate_sub)
+			add_dictionary[keyword].append(rate_bkg)
 			keyword = 'rate_bkg_err_%.1f_%.1fkeV' % (emin,emax)			
-			add_dictionary[keyword].append(rate_sub_error)		
+			add_dictionary[keyword].append(rate_bkg_error)		
 
 	cmd = 'rm -rf %s' % (outdir)
 	print(cmd);os.system(cmd)	
