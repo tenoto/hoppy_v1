@@ -158,7 +158,6 @@ def nibgdlc3c50(args):
 		if not os.path.exists(totspec):
 			for keyword in add_dictionary:
 				add_dictionary[keyword].append(np.nan)
-			i += 1 
 			continue 
 
 		for band in ratebands:
