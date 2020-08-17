@@ -35,10 +35,12 @@ def get_parser():
 		help='csvfile')		
 	parser.add_argument('--heasarc_repository', '-r', type=str, default=os.getenv('HEADAS_REPOSITORY'),
 		help='Heasarc repository directory. If this option is specified, the files are moved here.')	
+	parser.add_argument('--nicerteam_repository', '-n', type=str, default=os.getenv('NICERTEAM_REPOSITORY'),
+		help='NICER team data repository directory. If this option is specified, the files are moved here.')	
 
 	return parser
 
-def run_wget(obsid, yyyy_mm, heasarc_repository=None):
+def run_wget(obsid, yyyy_mm, heasarc_repository=None, nicerteam_repository=None):
 	print("\n[niwget] %s" % (sys._getframe().f_code.co_name))
 
 	if os.path.exists(obsid):
@@ -55,37 +57,83 @@ def run_wget(obsid, yyyy_mm, heasarc_repository=None):
 	for subdir in ['auxil','xti','log']:
 		cmd += 'wget -q -nH --no-check-certificate --cut-dirs=5 -r -l0 -c -N -np '
 		cmd += '-R \'index*\' -erobots=off --retr-symlinks '
-		cmd += 'https://heasarc.gsfc.nasa.gov/FTP/nicer/data/obs/%s//%s/%s/;\n' % (yyyy_mm, obsid, subdir)
+		cmd += 'https://heasarc.gsfc.nasa.gov/FTP/nicer/data/obs/%s/%s/%s/;\n' % (yyyy_mm, obsid, subdir)
 	print(cmd);os.system(cmd)
 	elapsed_time = time.time() - start_time
 
-	if not os.path.exists(obsid):
-		print("Error: file can not be download (check whether the yyyy_mm parameter is correct.)")
+	if os.path.exists(obsid):
+		print("successfully downloaded.")
+
+		flog = '%s/wget.log' % obsid
+		f = open(flog,'w')
+		f.write('--niwget--\n')
+		f.write(" yyyy_mm: %s\n" % yyyy_mm)	
+		f.write(" obsid: %s\n" % obsid)	
+		f.write(' requried time for download (sec): %.1f\n' % elapsed_time)
+		f.write(' downloaded date: %s\n' % datetime.datetime.now())	
+		f.write('\n')
+		f.write(cmd)
+		f.close()
+
+		if heasarc_repository != None and heasarc_repository != '' :
+			outdir = '%s/nicer/data/obs/%s' % (heasarc_repository,yyyy_mm)
+			if not os.path.exists(outdir):
+				cmd = 'mkdir -p %s' % outdir
+				print(cmd);os.system(cmd)
+			if os.path.exists('%s/%s' % (outdir,obsid)):
+				cmd = 'rm -rf %s/%s' % (outdir,obsid)
+				print(cmd);os.system(cmd)
+			cmd = 'mv %s %s' % (obsid,outdir)
+			print(cmd);os.system(cmd)
+
+		return 0 
+
+	print("========================")
+	print("We can not download the data from the public HEASARC archive page.")
+	print("Then, let us download the data from the NICER team webpage.")
+	print("%s" % nicerteam_repository)
+
+	start_time = time.time()
+	cmd  = ''
+	for subdir in ['auxil','xti','log']:
+		cmd += 'wget -q -nH --no-check-certificate --cut-dirs=5 -r -l0 -c -N -np '
+		cmd += '-R \'index*\' -erobots=off --retr-symlinks '
+		cmd += 'https://heasarc.gsfc.nasa.gov/FTP/nicer/data/.obs2validate/%s/%s/%s/;\n' % (yyyy_mm, obsid, subdir)
+	print(cmd);os.system(cmd)
+	elapsed_time = time.time() - start_time
+
+	if os.path.exists(obsid):
+		print("successfully downloaded.")
+
+		flog = '%s/wget.log' % obsid
+		f = open(flog,'w')
+		f.write('--niwget--\n')
+		f.write(" yyyy_mm: %s\n" % yyyy_mm)	
+		f.write(" obsid: %s\n" % obsid)	
+		f.write(' requried time for download (sec): %.1f\n' % elapsed_time)
+		f.write(' downloaded date: %s\n' % datetime.datetime.now())	
+		f.write('\n')
+		f.write(cmd)
+		f.close()
+
+		if nicerteam_repository != None and nicerteam_repository != '' :
+			outdir = '%s/nicer/data/obs/%s' % (nicerteam_repository,yyyy_mm)
+			if not os.path.exists(outdir):
+				cmd = 'mkdir -p %s' % outdir
+				print(cmd);os.system(cmd)
+			if os.path.exists('%s/%s' % (outdir,obsid)):
+				cmd = 'rm -rf %s/%s' % (outdir,obsid)
+				print(cmd);os.system(cmd)
+			cmd = 'mv %s %s' % (obsid,outdir)
+			print(cmd);os.system(cmd)
+
+		return 0 
+
+
+	else:
+
 		return -1
-
-	flog = '%s/wget.log' % obsid
-	f = open(flog,'w')
-	f.write('--niwget--\n')
-	f.write(" yyyy_mm: %s\n" % yyyy_mm)	
-	f.write(" obsid: %s\n" % obsid)	
-	f.write(' requried time for download (sec): %.1f\n' % elapsed_time)
-	f.write(' downloaded date: %s\n' % datetime.datetime.now())	
-	f.write('\n')
-	f.write(cmd)
-	f.close()
-
-	if heasarc_repository != None:
-		outdir = '%s/nicer/data/obs/%s' % (heasarc_repository,yyyy_mm)
-		if not os.path.exists(outdir):
-			cmd = 'mkdir -p %s' % outdir
-			print(cmd);os.system(cmd)
-		if os.path.exists('%s/%s' % (outdir,obsid)):
-			cmd = 'rm -rf %s/%s' % (outdir,obsid)
-			print(cmd);os.system(cmd)
-		cmd = 'mv %s %s' % (obsid,outdir)
-		print(cmd);os.system(cmd)
-
-	return(cmd)
+	
 
 def download_single_obsid(args):
 	print("\n[niwget] %s" % (sys._getframe().f_code.co_name))
@@ -93,7 +141,8 @@ def download_single_obsid(args):
 	print("--niwget--")
 	print(" obsid: %s" % args.obsid)
 	print(" yyyy_mm: %s" % args.yyyy_mm)
-	run_wget(args.obsid, args.yyyy_mm, heasarc_repository=args.heasarc_repository)
+	run_wget(args.obsid, args.yyyy_mm, 
+		heasarc_repository=args.heasarc_repository, nicerteam_repository=args.nicerteam_repository)
 
 def download_multiple_obsid(args):
 	print("\n[niwget] %s" % (sys._getframe().f_code.co_name))
@@ -110,7 +159,8 @@ def download_multiple_obsid(args):
 			print(row['Target Name'],row['Observation ID'],row['Start TimeUTC'],row['Good Expo[s]'])
 			yyyy, mm, others = row['Start TimeUTC'].split('-')
 			yyyy_mm = yyyy + "_" + mm
-			run_wget(row['Observation ID'], yyyy_mm, heasarc_repository=args.heasarc_repository)
+			run_wget(row['Observation ID'], yyyy_mm, 
+				heasarc_repository=args.heasarc_repository, nicerteam_repository=args.nicerteam_repository)
 
 def main(args=None):
 	parser = get_parser()
