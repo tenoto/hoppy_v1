@@ -1,14 +1,69 @@
-HOPPY (High-energy Observatory Pipelines via PYthon)
-===
+# HOPPY: High-energy Observatory Pipelines via PYthon
 
+###### tags: `python` `library`
 
 [![hackmd-github-sync-badge](https://hackmd.io/KktKqjMbT3Gj3zNO0Jpk6w/badge)](https://hackmd.io/KktKqjMbT3Gj3zNO0Jpk6w)
 
-This package includes libararies and scripts for X-ray analyses of High-energy Observatory Pipelines of PYthon (HOPPY). 
+:beer::beer::beer: https://github.com/tenoto/hoppy
+ 
+このパッケージは、Ｘ線データ解析でよく使う処理を自動化するためのライブラリやスクリプトの集合体です。
 
-https://github.com/tenoto/hoppy
+## 初期設定
 
-Latest version 0.1.0 
+### Python 環境
+
+`pyenv` と `pyenv-virtualenv` の環境で動かせるのが理想です。
+
+### パス設定
+
+シェル設定ファイル (e.g., ~/.zshrc) に以下の
+
+```
+export HOPPY_PATH="Path/To/User/Hoppy/Directory"
+alias hoppyinit="source $HOPPY_PATH/setenv/setenv.bashrc"
+```
+
+毎回、コマンドプロンプトを立ち上げるたびに、
+
+```
+heainit
+hoppyinit
+```
+
+とすれば動かせるようになるはずです。Python の必要なライブラリは要求されたら、`pip install xxx` で随時入れてください。
+
+(本当は python ライブラリのバージョン管理して、環境ごとダウンロードできるようにしたいのですが、時間が取れないので、とりあえず...）
+
+## NICER 
+
+
+```
+hoppy/nicer
+├── cli (コマンドライン・スクリプト群)
+│   ├── niwget.py
+│   └── niauto.py
+├── nicer.py (モジュール)
+```
+
+### コマンド群
+
+#### ライブラリ
+- `nicer.py`: メインのライブラリ。`NicerElf` クラスは、寝ている間に仕事をしてくれる妖精さん(Elf)で、複数の ObsID のデータを扱う。`NicerObsID` と `NicerGTI` はそれぞれ、ObsID 単位、GTI 単位でのデータを扱う。
+
+#### ダウンロード関係
+- `niget_target_summary_sheet.py`: NICER Team のターゲット天体と ObsID リスト(Target Summary Sheet)をダウンロードします。チームの ID と Password が必要になります。
+- `nishow_target_segment_sheet.py`: Target Summary Sheet から、該当する天体もしくは ObsID の情報を抜き出して表示してくれます。
+- `* niget_yyyymm.py`: ObsID を指定し、該当するデータが保存されているディレクトリ（観測年と月）を教えてくれる。
+- `niwget.py`: 指定した ObsID もしくは、ターゲット名のデータをすべてダウンロードしてくる。HEASARC の公式アーカイブを探し、もしなければ NICER チーム内のアーカイブを確認する。
+
+#### パイプライン処理
+
+- `nipipeline.py`: 設定条件ファイルのレシピにしたがって、複数の ObsID についてパイプライン処理をしていきます。簡易的にスペクトル生成の結果まで作りますが、フィットは別にしてあります。
+- `niauto.py`: データダウンロード、パイプライン処理、スペクトル・フィットまでを自動化してある。
+
+
+<!--
+This package includes libararies and scripts for X-ray analyses of High-energy Observatory Pipeines of PYthon (HOPPY). 
 
 # Setup 
 Write following lines to the initialization setup (e.g., ~/.zshrc).
@@ -24,6 +79,7 @@ Everytime, you need to run the following command line inputs,
 heainit
 hoppyinit
 ```
+
 
 ## NICER 
 
@@ -140,9 +196,8 @@ hoppy
     - methods
         - generate_spectra
         - fit_spectrum
-
-## NICER 
-        
+ 
+-->
 
 ## Reference
 - Python package lesson https://github.com/BillMills/pythonPackageLesson (see demo python package)
