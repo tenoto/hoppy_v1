@@ -1,0 +1,1 @@
+# find ./  -name '*.gpg' -print0 | xargs -n1 -0 gpg  --ignore-mdc-error --batch --yes --passphrase $NICERDATA_DECRYPT_PASSPHRASE 

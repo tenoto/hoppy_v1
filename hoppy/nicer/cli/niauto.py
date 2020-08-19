@@ -32,6 +32,8 @@ def get_parser():
 		help='setup yaml file')		
 	parser.add_argument('--heasarc_repository', '-r', type=str, default=os.getenv('HEADAS_REPOSITORY'),
 		help='Heasarc repository directory. If this option is specified, the files are moved here.')	
+	parser.add_argument('--nicerteam_repository', '-n', type=str, default=os.getenv('NICERTEAM_REPOSITORY'),
+		help='NICER team repository directory. If this option is specified, the files are moved here.')		
 	parser.add_argument('--copyto', '-t', type=str, default=' /Users/enoto/Dropbox/01_enoto/research/nicer/auto/out',
 		help='copy to')
 
@@ -50,7 +52,8 @@ def niauto(args):
 	yyyy_mm = "%s_%s" % (yyyy,mm)
 
 	datadir = '%s/nicer/data/obs/%s/%s' % (os.getenv('HEADAS_REPOSITORY'),yyyy_mm,args.obsid)
-	if not os.path.exists(datadir):
+	datadir_team = '%s/nicer/data/obs/%s/%s' % (os.getenv('NICERTEAM_REPOSITORY'),yyyy_mm,args.obsid)	
+	if not os.path.exists(datadir) and not os.path.exists(datadir_team):
 		cmd = 'niwget.py -o %s -y %s -r %s' % (args.obsid,yyyy_mm,args.heasarc_repository)
 		print(cmd);os.system(cmd)
 
@@ -63,6 +66,13 @@ def niauto(args):
 	if not os.path.exists(specdir):
 		param = yaml.load(open(args.setupfile))
 		param['output_directory'] = outdir
+		if os.path.exists(datadir):
+			param['input_data_directory'] = '%s/nicer/data/obs/*' % os.getenv('HEADAS_REPOSITORY')
+		elif os.path.exists(datadir_team):
+			param['input_data_directory'] = '%s/nicer/data/obs/*' % os.getenv('NICERTEAM_REPOSITORY')
+		else:
+			print("Error: no input files")
+			return -1			
 		input_setup_yaml = '%s/input_setup.yaml' % outdir
 		with open(input_setup_yaml, 'w') as file:
 		    yaml.dump(param, file)
