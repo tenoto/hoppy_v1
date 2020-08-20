@@ -34,32 +34,67 @@ hoppyinit
 
 (本当は python ライブラリのバージョン管理して、環境ごとダウンロードできるようにしたいのですが、時間が取れないので、とりあえず...）
 
-## NICER 
+## Xspec 
 
+Xspec の自動解析を、コマンドラインをそのまま書き下して実装。
+
+### ライブラリ
+
+- `xspec.py`:
+
+### コマンド (CLI)
+
+- `get_xspec_rate.py`: Xspec の `show rate` コマンドで表示されるレートを読んでくれる。
+- `xspec_fit.py`:　ひとつの Xspec のフィッティングを実行する。
+- `make_csv2xspec.py`: 入力するスペクトルファイル、rmf, arf のレスポンスファイル、パラメータの yaml ファイルを入力したら、`xspec_multi_fit.py` の入力ファイルに変換してくれる。
+- `xspec_multi_fit.py`: `xspec_fit.py` をシリーズで複数回実行する。
+
+## NICER 
 
 ```
 hoppy/nicer
 ├── cli (コマンドライン・スクリプト群)
 │   ├── niwget.py
+│   ├── ...
 │   └── niauto.py
 ├── nicer.py (モジュール)
 ```
 
-### コマンド群
+### ライブラリ
 
-#### ライブラリ
 - `nicer.py`: メインのライブラリ。`NicerElf` クラスは、寝ている間に仕事をしてくれる妖精さん(Elf)で、複数の ObsID のデータを扱う。`NicerObsID` と `NicerGTI` はそれぞれ、ObsID 単位、GTI 単位でのデータを扱う。
+
+### コマンド (CLI)
 
 #### ダウンロード関係
 - `niget_target_summary_sheet.py`: NICER Team のターゲット天体と ObsID リスト(Target Summary Sheet)をダウンロードします。チームの ID と Password が必要になります。
 - `nishow_target_segment_sheet.py`: Target Summary Sheet から、該当する天体もしくは ObsID の情報を抜き出して表示してくれます。
-- `* niget_yyyymm.py`: ObsID を指定し、該当するデータが保存されているディレクトリ（観測年と月）を教えてくれる。
+- `niget_yyyymm.py`: ObsID を指定し、該当するデータが保存されているディレクトリ（観測年と月）を教えてくれる。
 - `niwget.py`: 指定した ObsID もしくは、ターゲット名のデータをすべてダウンロードしてくる。HEASARC の公式アーカイブを探し、もしなければ NICER チーム内のアーカイブを確認する。
 
 #### パイプライン処理
 
 - `nipipeline.py`: 設定条件ファイルのレシピにしたがって、複数の ObsID についてパイプライン処理をしていきます。簡易的にスペクトル生成の結果まで作りますが、フィットは別にしてあります。
 - `niauto.py`: データダウンロード、パイプライン処理、スペクトル・フィットまでを自動化してある。
+
+## 時間変動解析 (未実装・実装中)
+
+### ライブラリ
+
+- `timeseries.py`: 
+
+### コマンド (CLI)
+
+- `tmsearchburst.py`: イベント形式のデータで、一定幅の時間変動を示すライトカーブから、それに当てはまらな増大を検出する。
+
+## Reference
+- Python package lesson https://github.com/BillMills/pythonPackageLesson (see demo python package)
+- PEP 8 -- Style Guide for Python Code https://www.python.org/dev/peps/pep-0008/?
+
+## History
+- 2020-08-17 modified (Teruaki Enoto)
+- 2018-11-14 new version 0.1.0 is created for CLI interface using click.
+
 
 
 <!--
@@ -198,11 +233,3 @@ hoppy
         - fit_spectrum
  
 -->
-
-## Reference
-- Python package lesson https://github.com/BillMills/pythonPackageLesson (see demo python package)
-- PEP 8 -- Style Guide for Python Code https://www.python.org/dev/peps/pep-0008/?
-
-## History
-- 2020-08-17 modified (Teruaki Enoto)
-- 2018-11-14 new version 0.1.0 is created for CLI interface using click.
