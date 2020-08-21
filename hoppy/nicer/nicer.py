@@ -594,14 +594,26 @@ class NicerElf():
 		self.nicerobs_lst = []
 		for line in open(self.obsid_lstfile):
 			obsid = line.split()[0]
+
+			# check gpg 
+			flag_have_clevt = False			
+			tmp_clevt_lst = glob.glob('%s/%s/xti/event_cl/ni%s_0mpu7_cl.evt*' % (self.param["input_data_directory"],obsid,obsid))
+			for file in tmp_clevt_lst:
+				if os.path.splitext(file)[-1] in ['.gz','.evt']:
+					flag_have_clevt = True
+					break 
+
 			if obsid in ['#','%']:
 				print('...comment out and skip the line: %s' % line)
 				continue 
-			elif obsid == 'exit':
+			elif obsid == 'exit' or obsid == 'quit' or obsid == 'exit()' or obsid == 'quit()' :
 				break
 			elif len(glob.glob('%s/%s' % (self.param["input_data_directory"],obsid))) == 0:
 				print('...no directory and skip obsid: %s' % obsid)
-				continue
+				continue					
+			elif not flag_have_clevt:
+				print('...no clenaed event (gpg?) and skip obsid: %s' % obsid)
+				continue					
 			else:
 				indir = glob.glob('%s/%s' % (self.param["input_data_directory"],obsid))[0]
 				outdir = '%s/%s' % (self.param['output_directory'],obsid)
