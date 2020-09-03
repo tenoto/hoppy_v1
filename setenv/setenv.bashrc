@@ -29,4 +29,5 @@ export PATH=$HOPPY_PATH/hoppy/nicer/cli:$PATH
 echo "----- XSPEC -----"
 export PATH=$HOPPY_PATH/hoppy/xspec/cli:$PATH
 
-
+echo "----- TIMING -----"
+export PATH=$HOPPY_PATH/hoppy/timing/cli:$PATH
