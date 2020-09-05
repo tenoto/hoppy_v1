@@ -61,9 +61,9 @@ plt.savefig("tmp1.pdf")
 fig, axs = plt.subplots(1,1, figsize=(8.27,8.27))
 plt.plot(df['PDCSAP_FLUX_normalized'][mask],df['cps_0.3_1.0keV'][mask],'o')
 #	'o',mec='k',markersize=4,where='mid',color='#FF5733')
-#axs[0].set_ylabel('NICER rate (cps) 0.3-1.0 keV',fontsize=fontsize)
+plt.xlabel('TESS optical intensity (arbitary)',fontsize=fontsize)
 #axs[0].set_yscale('log')
-#axs[1].set_xlabel('MJD (day)',fontsize=fontsize)
+plt.ylabel('NICER (cps) 0.3-1.0 keV',fontsize=fontsize)
 plt.tight_layout(pad=2)
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["mathtext.fontset"] = "dejavuserif"
