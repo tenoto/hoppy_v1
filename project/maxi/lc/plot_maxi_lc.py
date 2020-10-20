@@ -4,7 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-crab_rate = 3.9 
+crab_rate = 3.74
+# e-mail from Iwakiri kun, on October 20, 2020. The median value over the 10 years of MAXI. 
 
 df_maxij1820 = pd.read_csv("project/maxi/lc/data/J1820+071_g_lc_1day_all.dat",
 	names=["MJD","rate1","error1","rate2","error2","rate3","error3","rate4","error4"],
