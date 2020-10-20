@@ -3,6 +3,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.dates as mdates
 
 df = pd.read_csv("project/scox1/optical/data/vsolj29908_scox1_maehara.dat",
         names=["source","time","magnitude","na"],
@@ -11,24 +12,35 @@ print(df)
 
 magnitude = df.magnitude.str.strip('C').astype(float)
 
-#yyyy = df["time"].astype(str).str[0:4]
-#mm = df["time"].astype(str).str[4:6]
-#dd = df["time"].astype(str).str[6:8]
-#HH = df["time"].astype(str).str[8:10]
-#MM = df["time"].astype(str).str[10:12]
-#SS = df["time"].astype(str).str[12:14]
-#print(yyyy,mm,dd,HH,MM,SS)
+yyyy = df["time"].astype(str).str[0:4]
+mm = df["time"].astype(str).str[4:6]
+dd = df["time"].astype(str).str[6:8]
+HH = (df["time"].astype(str).str[8:10].astype(int) - 9).astype(str)
+MM = df["time"].astype(str).str[10:12]
+SS = df["time"].astype(str).str[12:14]
 
-#print(df.time)
+str_date = yyyy + mm + dd + HH + MM + SS
 
-print(df.time[0:3])
-#print(type(df.time[0:3].astype(str)))
+obstime = pd.to_datetime(str_date,format="%Y%m%d%H%M%S")
 
-#pd.to_datetime(df.time[0:3].astype(str),format="%Y%m%d%H%M%S")
+fig, ax = plt.subplots(nrows=1,ncols=1,sharex=True,figsize=(12,4))
+plt.gca().invert_yaxis()
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+ax.step(obstime, magnitude)
+ax.set_xlabel(r"UT Time on March 20, 2009") 
+ax.set_ylabel(r"Magnitude") 
+#ax.plot(obstime, magnitude,'o-',mec='k',label="Sco X-1",markersize=4,markeredgewidth=1)
+#axs[0].set_xlim(57754,59142) # 2017-01-01 to 2020-10-20
+#axs[0].set_ylim(0.03,20)
+#axs[0].axhline(y=1,linewidth=1,color='k',ls="--")
 
-#dtime = pd.to_datetime(df["time"],format="%Y%m%d%H%M%S")
-#print(time)
 
-#print(df["time"].astype(str))
+plt.savefig('scox1_optical_200903.pdf',bbox_inches='tight',transparent=True)
 
-print(pd.to_datetime(["20090320"],format="%Y%m%d"))
+
+
+
+
+
+
+
