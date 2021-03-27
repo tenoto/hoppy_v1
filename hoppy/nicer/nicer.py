@@ -19,6 +19,9 @@ class NicerObsID():
 		self.outdir = outdir; 
 		print("[NicerObsID %s] A new NicerObs is generated" % self.obsid)
 
+
+		self.error_log = '%s/error_log.txt' % self.param['output_directory']
+
 		self.setup_yamlfile = '%s/ni%s_result.yaml' % (self.outdir,self.obsid)
 		self.have_event_files()
 		sleep(1) # this is needed, otherwise sometimes flag_clevt_has_events can not be ste.
@@ -70,25 +73,25 @@ class NicerObsID():
 		fversion = os.popen('fversion').read().rstrip()		
 	
 		# prepare a script for nicerl2 for each ObsID
-		fcmd = '%s/nicerl2_%s.sh' % (self.outdir,self.obsid)
-		flog = '%s/nicerl2_%s.log' % (self.outdir,self.obsid)
-		f = open(fcmd,'w')
+		self.fcmd_nicerl2 = '%s/nicerl2_%s.sh' % (self.outdir,self.obsid)
+		self.flog_nicerl2 = '%s/nicerl2_%s.log' % (self.outdir,self.obsid)
+		f = open(self.fcmd_nicerl2,'w')
 		dump  = '#!/bin/sh -f\n'
 		dump += 'nicerl2 indir=%s ' % (self.outdir)
 		dump += 'picalfile=%s ' % self.param['nicerl2_gcalfile']
 		dump += 'clobber=yes '
-		dump += '> %s 2>&1 ' % flog
+		dump += '> %s 2>&1 ' % self.flog_nicerl2
 		dump += '\n'
 		f.write(dump)
 		f.close()
 
 		# run the script.
-		cmd  = 'chmod +x %s\n' % fcmd
-		cmd += './%s' % fcmd
+		cmd  = 'chmod +x %s\n' % self.fcmd_nicerl2
+		cmd += './%s' % self.fcmd_nicerl2
 		print(cmd)
 		os.system(cmd)
 
-		f = open(flog,'a')
+		f = open(self.flog_nicerl2,'a')
 		f.write(fversion+'\n')
 		f.close()
 
@@ -209,6 +212,7 @@ class NicerObsID():
 		cmd  = "ps2pdf %s.ps\n" % fspec
 		cmd += "rm -f %s.ps\n" % fspec
 		cmd += "mv %s.pdf %s/\n" % (fspec,suboutdir)
+		self.spec_pdf = '%s/%s.pdf' % (suboutdir,fspec)
 		print(cmd)
 		os.system(cmd)
 
@@ -297,6 +301,8 @@ class NicerObsID():
 		print(cmd)
 		os.system(cmd)			
 
+		self.lc_pdf = '%s/lc/ni%s_0mpu7_cl_ene.pdf' % (self.outdir,self.obsid)
+
 		self.dump_setup_to_yamlfile()
 
 	def run_barycorr(self):
@@ -347,81 +353,192 @@ class NicerObsID():
 
 		self.dump_setup_to_yamlfile()
 
-	def devide_to_gti(self):
+	def devide_to_segment(self):
 		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
-		suboutdir = '%s/gti' % self.outdir
+		suboutdir = '%s/segment' % self.outdir
 		cmd  = 'rm -rf %s;\n' % suboutdir
 		cmd += 'mkdir -p %s\n' % suboutdir
 		print(cmd);os.system(cmd)
 
-		hdu = fits.open(self.clevt)
-		number_of_gti = len(hdu['GTI'].data)
+		print(self.clevt)
+		cmd = 'rm -f tmp_gti.txt; group_gti.py %s tmp_gti.txt --gti_separation_threshold %.2f' % (self.clevt,self.param['gti_separation_threshold'])
+		print(cmd);os.system(cmd)
 
-		for gtinum in range(number_of_gti):
-			gti_dir = '%s/%003d' % (suboutdir,gtinum)
-			cmd  = 'mkdir -p %s;\n' % gti_dir
-			cmd += 'extract_gti_fits.py %s %d;\n' % (self.clevt,gtinum)
-			gti_basename = 'ni%s_0mpu7_cl_gti%03d' % (self.obsid,gtinum)
-			cmd += 'mv %s.{evt,gti} %s\n' % (gti_basename,gti_dir)
+		segment_gti = '%s/ni%s_segment.gti' % (suboutdir,self.obsid)
+		cmd = 'fconv_txt2gti.py -i tmp_gti.txt -o %s; rm -f tmp_gti.txt' % segment_gti 
+		print(cmd);os.system(cmd)
+
+		hdu = fits.open(segment_gti)
+		number_of_segment = len(hdu['GTI'].data)
+
+		self.nigsegment_list = []
+		for i in range(number_of_segment):
+			segment_num = i + 1 
+			segment_dir = '%s/ep%003d' % (suboutdir,segment_num)
+			print("----- segment_dir = %s" % segment_dir)
+			cmd  = 'mkdir -p %s;\n' % segment_dir
+			cmd += 'cp %s %s/tmp_sel.gti;\n' % (segment_gti,segment_dir)
+			if segment_num == 1:
+				if number_of_segment == 2:
+					#cmd += 'ftdelrow %s/tmp_sel.gti+1 none 2-2 confirm=YES;\n' % (segment_dir)
+					cmd += 'fdelrow %s/tmp_sel.gti+1 2 1 Y Y;\n' % (segment_dir)
+				else:
+					cmd += 'ftdelrow %s/tmp_sel.gti+1 none %d- confirm=YES;\n' % (segment_dir,segment_num+1)					
+			elif segment_num == number_of_segment:
+				if number_of_segment == 2:
+					cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1 confirm=YES;\n' % (segment_dir)
+				else:
+					cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1-%d confirm=YES;\n' % (segment_dir,segment_num-1)	
+			else:
+				cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1-%d,%d- confirm=YES;\n' % (segment_dir,segment_num-1,segment_num+1)
 			print(cmd);os.system(cmd)
 
-			nigti = NicerGTI(self,gtinum,gti_dir,gti_basename)
-			if len(nigti.gti_hdu['EVENTS'].data) == 0:
+			segment_basename = 'ni%s_0mpu7_cl_ep%03d' % (self.obsid,segment_num)
+			segment_fitsfile = '%s.evt' % segment_basename
+			cmd  = 'xselect_gtifilter.py '
+			cmd += '-i %s ' % self.clevt
+			cmd += '-g %s/tmp_sel.gti ' % segment_dir
+			cmd += '-o %s/%s;\n' % (segment_dir,segment_fitsfile)
+			print(cmd);os.system(cmd)
+
+			nisegment = NicerSegment(self,segment_num,segment_dir,segment_basename)
+			if len(nisegment.segment_clhdu['EVENTS'].data) == 0:
 				print("... No event. skip.")
 				continue
 
-			nigti.set_title()
-			if nigti.nbint > 0: nigti.plot_lightcurve()
-			nigti.run_nibackgen3C50()
+			nisegment.set_title()
+			if nisegment.nbint > 0: 
+				nisegment.plot_lightcurve()
+			nisegment.run_nibackgen3C50()
+			self.nigsegment_list.append(nisegment)
 
-class NicerGTI():
-	def __init__(self,parent_nicerobsid,gtinum,gti_dir,gti_basename):
+		self.df_summary = pd.DataFrame(columns=['ObsID','segment','lc','spec'])
+		#for i in range(number_of_segment):
+		for nisegment in self.nigsegment_list:
+			lc_link = '<a href="./%s">pdf</a>' % nisegment.lc_pdf.replace(suboutdir,'')
+			spec_link = '<a href="./%s">pdf</a>' % nisegment.spec_pdf.replace(suboutdir,'')			
+			self.df_summary = self.df_summary.append({'ObsID':self.obsid,
+				'segment':nisegment.segment_num,
+				'lc':lc_link,'spec':spec_link}, ignore_index=True)
+
+		self.show_dataframe_summay()
+		self.write_dataframe_summary()
+
+	def fit_of_segment(self):
+		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
+
+		suboutdir = '%s/segment' % self.outdir
+		segment_gti = '%s/ni%s_segment.gti' % (suboutdir,self.obsid)
+		hdu = fits.open(segment_gti)
+		number_of_segment = len(hdu['GTI'].data)
+
+		for i in range(number_of_segment):
+			segment_num = i + 1 
+			segment_dir = '%s/ep%003d' % (suboutdir,segment_num)
+			print("----- segment_dir = %s" % segment_dir)
+			segment_basename = 'ni%s_0mpu7_cl_ep%03d' % (self.obsid,segment_num)
+			segment_fitsfile = '%s.evt' % segment_basename
+			nisegment = NicerSegment(self,segment_num,segment_dir,segment_basename)
+			if len(nisegment.segment_clhdu['EVENTS'].data) == 0:
+				print("... No event. skip.")
+				continue
+			nisegment.set_title()
+			try:
+				nisegment.fit_spectrum()
+			except:				
+				message  = "Error: [NicerObsID %s] %s\n" % (self.obsid,sys._getframe().f_code.co_name)
+				message += "        self.obsid=%s, segment_num=%d\n" % (self.obsid, segment_num)
+				f = open(self.error_log,'w')
+				f.write(message)
+				f.close()
+
+		dict_append = {}				
+		for nisegment in self.nigsegment_list:
+			link = '<a href="./%s">pdf</a>' % nisegment.fit_pdf.replace(suboutdir,'')
+			dict_append[link] = nisegment.segment_num
+		self.df_summary['fit'] = dict_append
+
+		self.show_dataframe_summay()
+		self.write_dataframe_summary()			
+
+	def show_dataframe_summay(self):
+		print("******* summary ******")
+		print(self.df_summary)
+		print("**********************")		
+
+	def write_dataframe_summary(self):
+		self.summary_csv = '%s/segment/ni%s_segment.csv' % (self.outdir,self.obsid)
+		self.summary_html = '%s/segment/ni%s_segment.html' % (self.outdir,self.obsid)
+		self.df_summary.to_csv(self.summary_csv)
+
+		raw_html = self.df_summary.to_html(open(self.summary_html,'w'))
+		cmd = 'sed -e "s/&lt;/</g" %s > tmp.html' % self.summary_html
+		print(cmd);os.system(cmd)
+		cmd = 'sed -e "s/&gt;/>/g" tmp.html > tmp2.html' 
+		print(cmd);os.system(cmd)		
+		cmd = 'mv tmp2.html %s; rm -f tmp.html tmp2.html' % self.summary_html
+		print(cmd);os.system(cmd)		
+
+
+class NicerSegment():
+	def __init__(self,parent_nicerobsid,segment_num,segment_dir,segment_basename):
 		self.parent_nicerobsid = parent_nicerobsid
-		self.gtinum = gtinum; 
-		self.gti_dir = gti_dir
-		self.gti_basename = gti_basename
-		print("\n[NicerGTI %d] A new NicerGTI is generated from a parent NicerObdID %s" % (
-			self.gtinum,self.parent_nicerobsid.obsid))
+		self.segment_num = segment_num; 
+		self.segment_dir = segment_dir
+		self.segment_basename = segment_basename
+		print("\n[NicerSegment %d] A new NicerSegment is generated from a parent NicerObdID %s" % (
+			self.segment_num,self.parent_nicerobsid.obsid))
 
 		self.obsid = self.parent_nicerobsid.obsid
 		self.param = self.parent_nicerobsid.param
 
-		self.gti_fits = '%s/%s.gti' % (self.gti_dir,self.gti_basename)
-		self.gti_clevt = '%s/%s.evt' % (self.gti_dir,self.gti_basename)
-		self.gti_hdu = fits.open(self.gti_clevt)
+		self.segment_fits = '%s/%s.gti' % (self.segment_dir,self.segment_basename)
+		self.segment_clevt = '%s/%s.evt' % (self.segment_dir,self.segment_basename)
+		self.segment_clhdu = fits.open(self.segment_clevt)
+
+		self.segment_ufaevt = '%s/ni%s_0mpu7_ufa_ep%03d.evt' % (self.segment_dir,self.obsid,self.segment_num)
+		self.totspec_name = 'ni%s_ep%03d_3c50_tot' % (self.obsid,self.segment_num)
+		self.bkgspec_name = 'ni%s_ep%03d_3c50_bkg' % (self.obsid,self.segment_num)
+		self.totspec = '%s/%s.pi' % (self.segment_dir,self.totspec_name)
+		self.bkgspec = '%s/%s.pi' % (self.segment_dir,self.bkgspec_name)
 
 	def set_title(self):
-		print("\n[NicerGTI %s/%s] %s" % (self.gtinum,self.obsid,sys._getframe().f_code.co_name))
+		print("\n[NicerSegment %s/%s] %s" % (self.segment_num,self.obsid,sys._getframe().f_code.co_name))
 
-		self.tstart = float(self.gti_hdu['GTI'].data[0][0])
-		self.tstop = float(self.gti_hdu['GTI'].data[0][1])
-		self.exposure = self.tstop - self.tstart
-		self.nbint = round(self.exposure/float(self.param['lc_time_bin_sec']))
+		self.tstart = float(self.segment_clhdu['GTI'].data[0][0])
+		self.tstop = float(self.segment_clhdu['GTI'].data[-1][1])
+		self.duration = self.tstop - self.tstart
+
+		hdu = fits.open(self.segment_clevt)
+		self.exposure = float(hdu[0].header['EXPOSURE'])
+
+		self.nbint = round(self.duration/float(self.param['lc_time_bin_sec']))
 		self.title = 'ObsID:%s GTI:%003d MJD:%.2f-%.2f (%.1f s)' % (
-			self.obsid,self.gtinum,self.tstart,self.tstop,self.exposure)
+			self.obsid,self.segment_num,self.tstart,self.tstop,self.exposure)
+		print(self.duration,self.nbint,self.param['lc_time_bin_sec'])
 
 	def plot_lightcurve(self):
-		print("\n[NicerGTI %s/%s] %s" % (self.gtinum,self.obsid,sys._getframe().f_code.co_name))
+		print("\n[NicerSegment %s/%s] %s" % (self.segment_num,self.obsid,sys._getframe().f_code.co_name))
 
 		cmd = '\n'
 		for eband in self.param['lc_energy_bands']:
 			emin,emax = self.param['lc_energy_bands'][eband]
-			fenesel = '%s/ni%s_0mpu7_cl_gti%03d_%s.evt' % (self.gti_dir,self.obsid,self.gtinum,eband)
-			cmd += "fselect_energy.py %s %s %.1f %.1f\n" % (self.gti_clevt,fenesel,emin,emax)
+			fenesel = '%s/ni%s_0mpu7_cl_ep%03d_%s.evt' % (self.segment_dir,self.obsid,self.segment_num,eband)
+			cmd += "fselect_energy.py %s %s %.1f %.1f\n" % (self.segment_clevt,fenesel,emin,emax)
 		print(cmd);os.system(cmd)			
 
-		fcmd = '%s/ni%s_0mpu7_cl_gti%03d_ene.sh' % (self.gti_dir,self.obsid,self.gtinum)
-		flog = '%s/ni%s_0mpu7_cl_gti%03d_ene.log' % (self.gti_dir,self.obsid,self.gtinum)
-		psfile = '%s/ni%s_0mpu7_cl_gti%03d_ene.ps' % (self.gti_dir,self.obsid,self.gtinum)
+		fcmd = '%s/ni%s_0mpu7_cl_ep%03d_ene.sh' % (self.segment_dir,self.obsid,self.segment_num)
+		flog = '%s/ni%s_0mpu7_cl_ep%03d_ene.log' % (self.segment_dir,self.obsid,self.segment_num)
+		psfile = '%s/ni%s_0mpu7_cl_ep%03d_ene.ps' % (self.segment_dir,self.obsid,self.segment_num)
 		f = open(fcmd,'w')
 		dump  = '#!/bin/sh -f\n'
 
-		flcfile = '%s/ni%s_0mpu7_cl_gti%03d_ene.flc' % (self.gti_dir,self.obsid,self.gtinum)
+		flcfile = '%s/ni%s_0mpu7_cl_ep%03d_ene.flc' % (self.segment_dir,self.obsid,self.segment_num)
 		dump += 'lcurve nser=%d ' % len(self.param['lc_energy_bands'])
 		i = 1
 		for eband in self.param['lc_energy_bands']:
-			fenesel = '%s/ni%s_0mpu7_cl_gti%03d_%s.evt' % (self.gti_dir,self.obsid,self.gtinum,eband)
+			fenesel = '%s/ni%s_0mpu7_cl_ep%03d_%s.evt' % (self.segment_dir,self.obsid,self.segment_num,eband)
 			dump += 'cfile%d="%s" ' % (i,fenesel)
 			i += 1 
 		dump += 'window="-" ' 
@@ -455,14 +572,14 @@ class NicerGTI():
 
 		cmd  = "ps2pdf %s\n" % psfile
 		cmd += "rm -f %s\n" % psfile
-		cmd += "mv %s.pdf %s\n" % (os.path.splitext(os.path.basename(psfile))[0],self.gti_dir)
+		cmd += "mv %s.pdf %s\n" % (os.path.splitext(os.path.basename(psfile))[0],self.segment_dir)
 		print(cmd)
 		os.system(cmd)
 
-	def run_nibackgen3C50(self):
-		print("\n[NicerGTI %s/%s] %s" % (self.gtinum,self.obsid,sys._getframe().f_code.co_name))
+		self.lc_pdf = '%s/%s.pdf' % (self.segment_dir,os.path.splitext(os.path.basename(psfile))[0])
 
-		self.gti_ufaevt = '%s/ni%s_0mpu7_ufa_gti%03d.evt' % (self.gti_dir,self.obsid,self.gtinum)
+	def run_nibackgen3C50(self):
+		print("\n[NicerSegment %s/%s] %s" % (self.segment_num,self.obsid,sys._getframe().f_code.co_name))
 
 		cmd = 'rm -f xselect.log'
 		print(cmd);os.system(cmd)
@@ -472,9 +589,9 @@ class NicerGTI():
 		cmd += 'read event %s ./\n' % self.parent_nicerobsid.ufaevt
 		cmd += 'yes\n'
 		cmd += 'filter time file\n'
-		cmd += '%s\n' % self.gti_fits
+		cmd += '%s\n' % self.segment_fits
 		cmd += 'extract event\n'
-		cmd += 'save event %s\n' % self.gti_ufaevt
+		cmd += 'save event %s\n' % self.segment_ufaevt
 		cmd += 'yes\n'
 		cmd += 'exit\n'
 		cmd += 'no\n'
@@ -487,13 +604,10 @@ class NicerGTI():
 
 		# ============================================
 
-		self.totspec_name = 'ni%s_gti%03d_3c50_tot' % (self.obsid,self.gtinum)
-		self.bkgspec_name = 'ni%s_gti%03d_3c50_bkg' % (self.obsid,self.gtinum)
-		self.totspec = '%s/%s.pi' % (self.gti_dir,self.totspec_name)
-		self.bkgspec = '%s/%s.pi' % (self.gti_dir,self.bkgspec_name)
+
 		# prepare a script for nicerl2 for each ObsID
-		fcmd = '%s/nibackgen3C50_%s_gti%03d.sh' % (self.gti_dir,self.obsid,self.gtinum)
-		flog = '%s/nibackgen3C50_%s_gti%03d.log' % (self.gti_dir,self.obsid,self.gtinum)
+		fcmd = '%s/nibackgen3C50_%s_ep%03d.sh' % (self.segment_dir,self.obsid,self.segment_num)
+		flog = '%s/nibackgen3C50_%s_ep%03d.log' % (self.segment_dir,self.obsid,self.segment_num)
 		f = open(fcmd,'w')
 		dump  = '#!/bin/sh -f\n'
 		dump += 'nibackgen3C50 '
@@ -503,10 +617,10 @@ class NicerGTI():
 		dump += 'bkgidxdir=\'%s\' ' % self.param['nibackgen3c50_bkgidxdir']
 		dump += 'bkglibdir=\'%s\' ' % self.param['nibackgen3c50_bkgidxdir']	
 		dump += 'gainepoch=\'%s\' ' % self.param['nibackgen3c50_gainepoch']
-		dump += 'clfile=\'%s\' ' % self.gti_clevt		
-		dump += 'ufafile=\'%s\' ' % self.gti_ufaevt
-		dump += 'totspec=\'%s/%s\' ' % (self.gti_dir,self.totspec_name)
-		dump += 'bkgspec=\'%s/%s\' ' % (self.gti_dir,self.bkgspec_name)
+		dump += 'clfile=\'%s\' ' % self.segment_clevt		
+		dump += 'ufafile=\'%s\' ' % self.segment_ufaevt
+		dump += 'totspec=\'%s/%s\' ' % (self.segment_dir,self.totspec_name)
+		dump += 'bkgspec=\'%s/%s\' ' % (self.segment_dir,self.bkgspec_name)
 		dump += 'dtmin=%.1f dtmax=%.1f hbgcut=%.1f ' % (self.param['nibackgen3c50_dtmin'],self.param['nibackgen3c50_dtmax'],self.param['nibackgen3c50_hbgcut'])
 		dump += '> %s 2>&1 ' % flog
 		dump += '\n'
@@ -520,7 +634,7 @@ class NicerGTI():
 			print(cmd);os.system(cmd)	
 		except:
 			f = open(flog,'w')
-			message = "nibackgen3c50 failed at gti %d (e.g., 'Error of no events in new cleaned event file')" % self.gtinum
+			message = "nibackgen3c50 failed at ep %d (e.g., 'Error of no events in new cleaned event file')" % self.segment_num
 			print(message)
 			f.write(message)
 			f.close()
@@ -528,7 +642,7 @@ class NicerGTI():
 
 		if not (os.path.exists(self.totspec) and os.path.exists(self.bkgspec)):
 			f = open(flog,'w')
-			message = "nibackgen3c50 failed at gti %d (e.g., 'Error of no events in new cleaned event file')" % self.gtinum
+			message = "nibackgen3c50 failed at ep %d (e.g., 'Error of no events in new cleaned event file')" % self.segment_num
 			print(message)
 			f.write(message)
 			f.close()
@@ -545,7 +659,7 @@ class NicerGTI():
 		keyword_dateobs = hdu[0].header['DATE-OBS']
 		keyword_object = hdu[0].header['OBJECT']		
 		keyword_exposure = hdu[0].header['EXPOSURE']			
-		title = '%s ObsID:%s GTI:%03d (%s, %.1f sec)' % (keyword_object, self.obsid, self.gtinum, keyword_dateobs,keyword_exposure)
+		title = '%s ObsID:%s GTI:%03d (%s, %.1f sec)' % (keyword_object, self.obsid, self.segment_num, keyword_dateobs,keyword_exposure)
 
 		fspec = "ni%s_tot_spec" % self.obsid
 		cmd  = "xspec <<EOF\n"
@@ -574,9 +688,27 @@ class NicerGTI():
 
 		cmd  = "ps2pdf %s.ps\n" % fspec
 		cmd += "rm -f %s.ps\n" % fspec
-		cmd += "mv %s.pdf %s/\n" % (fspec,self.gti_dir)
+		cmd += "mv %s.pdf %s/\n" % (fspec,self.segment_dir)
 		print(cmd)
 		os.system(cmd)
+
+		self.spec_pdf = '%s/%s.pdf' % (self.segment_dir,fspec)
+
+	def fit_spectrum(self):
+		cmd  = 'xspec_fit.py '
+		cmd += '%s ' % self.totspec
+		cmd += '-o %s/fit ' % self.segment_dir
+		cmd += '-b %s ' % self.bkgspec
+		cmd += '-r %s ' % self.param['xspec_rmf']
+		cmd += '-a %s ' % self.param['xspec_arf']
+		cmd += '-m %s ' % self.param['xspec_model']
+		cmd += '-s %d -n %d ' % (self.param['xspec_rebin_sigma'],self.param['xspec_rebin_maxnum'])
+		cmd += '--fitemin %.1f --fitemax %.1f ' % (self.param['xspec_emin'],self.param['xspec_emax'])
+		cmd += '--rateband %s ' % self.param['xspec_rateband']
+		cmd += '--fluxband %s \n' % self.param['xspec_fluxband']
+		print(cmd);os.system(cmd)
+
+		#self.fit_pdf = '%s/fit/%s.pdf' % (self.segment_dir,fspec)
 
 
 class NicerElf():
@@ -589,6 +721,9 @@ class NicerElf():
 		self.obsid_lstfile = obsid_lstfile
 
 		print('...param: %s' % self.param)
+
+		self.error_log = '%s/error_log.txt' % self.param['output_directory']
+		self.df_summary = pd.DataFrame(columns=['ObsID'])
 
 		print('...seting nicerobs_lst')
 		self.nicerobs_lst = []
@@ -621,37 +756,78 @@ class NicerElf():
 				self.nicerobs_lst.append(NicerObsID(
 					obsid=obsid,indir=indir,outdir=outdir,param=self.param))
 
+		for niobsid in self.nicerobs_lst:
+			self.df_summary = self.df_summary.append({'ObsID':niobsid.obsid}, ignore_index=True)
+
+	def show_dataframe_summay(self):
+		print("******* summary ******")
+		print(self.df_summary)
+		print("**********************")		
+
+	def write_dataframe_summary(self):
+		self.summary_csv = '%s/nipipeline_summary.csv' % self.param['output_directory']
+		self.summary_html = '%s/nipipeline_summary.html' % self.param['output_directory']		
+		self.df_summary.to_csv(self.summary_csv)
+
+		raw_html = self.df_summary.to_html(open(self.summary_html,'w'))
+		cmd = 'sed -e "s/&lt;/</g" %s > tmp.html' % self.summary_html
+		print(cmd);os.system(cmd)
+		cmd = 'sed -e "s/&gt;/>/g" tmp.html > tmp2.html' 
+		print(cmd);os.system(cmd)		
+		cmd = 'mv tmp2.html %s; rm -f tmp.html tmp2.html' % self.summary_html
+		print(cmd);os.system(cmd)		
+
 	def make_directory(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
 		if not self.param['flag_make_directory']:
 			print("skip ... since flag_make_directory is %s" % self.param['flag_make_directory']) 
 			return 0		
+		dict_append = {}
 		for niobsid in self.nicerobs_lst:
 			niobsid.make_directory()
+			link = '<a href="./%s">dir</a>' % niobsid.outdir.replace(self.param['output_directory'],'')
+			dict_append[link] = niobsid.obsid
+		self.df_summary['Directory'] = dict_append
+		self.write_dataframe_summary()
 
 	def run_nicerl2(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
 		if not self.param['flag_run_nicerl2']:
 			print("skip ... since flag_run_nicerl2 is %s" % self.param['flag_run_nicerl2']) 
-			return 0			
+			return 0
+		dict_append = {}						
 		for niobsid in self.nicerobs_lst:
 			niobsid.run_nicerl2()
+			link = '<a href="./%s">log</a>' % niobsid.flog_nicerl2.replace(self.param['output_directory'],'')
+			dict_append[link] = niobsid.obsid
+		self.df_summary['nicerl2'] = dict_append
+		self.write_dataframe_summary()
 
 	def run_nibackgen3C50(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
 		if not self.param['flag_run_nibackgen3C50']:
 			print("skip ... since flag_run_nibackgen3C50 is %s" % self.param['flag_run_nibackgen3C50']) 
-			return 0			
+			return 0	
+		dict_append = {}											
 		for niobsid in self.nicerobs_lst:
 			niobsid.run_nibackgen3C50()
+			link = '<a href="./%s">pdf</a>' % niobsid.spec_pdf.replace(self.param['output_directory'],'')
+			dict_append[link] = niobsid.obsid
+		self.df_summary['spec'] = dict_append
+		self.write_dataframe_summary()
 
 	def plot_lightcurve(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
 		if not self.param['flag_plot_lightcurve']:
 			print("skip ... since flag_plot_lightcurve is %s" % self.param['flag_plot_lightcurve']) 
-			return 0			
+			return 0	
+		dict_append = {}														
 		for niobsid in self.nicerobs_lst:
 			niobsid.plot_lightcurve()
+			link = '<a href="./%s">pdf</a>' % niobsid.lc_pdf.replace(self.param['output_directory'],'')
+			dict_append[link] = niobsid.obsid
+		self.df_summary['lc'] = dict_append
+		self.write_dataframe_summary()
 
 	def run_barycorr(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
@@ -661,81 +837,23 @@ class NicerElf():
 		for niobsid in self.nicerobs_lst:
 			niobsid.run_barycorr()
 
-	def devide_to_gti(self):
+	def devide_to_segment(self):
 		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
-		if not self.param['flag_devide_to_gti']:
-			print("skip ... since flag_devide_to_gti is %s" % self.param['flag_devide_to_gti']) 
+		if not self.param['flag_devide_to_segment']:
+			print("skip ... since flag_devide_to_segment is %s" % self.param['flag_devide_to_segment']) 
+			return 0		
+		dict_append = {}				
+		for niobsid in self.nicerobs_lst:
+			niobsid.devide_to_segment()
+			link = '<a href="./%s">html</a>' % niobsid.summary_html.replace(self.param['output_directory'],'')
+			dict_append[link] = niobsid.obsid
+		self.df_summary['segment'] = dict_append
+		self.write_dataframe_summary()
+
+	def fit_of_segment(self):
+		print("\n[NicerElf] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_fit_of_segment']:
+			print("skip ... since flag_fit_of_segment is %s" % self.param['flag_fit_of_segment']) 
 			return 0		
 		for niobsid in self.nicerobs_lst:
-			niobsid.devide_to_gti()
-
-"""
-def record_results(obsid):
-	print("record_results obsid=%s" % obsid)
-
-	if not os.path.exists('%s/%s' % (outdir,obsid)):
-		print("ERROR no directory for %s." % obsid)
-		return -1
-
-	cmd  = 'rm -rf %s/%s/param;\n' % (outdir,obsid)
-	cmd += 'mkdir -p %s/%s/param\n' % (outdir,obsid)
-	print(cmd);os.system(cmd)
-
-	totspec_name = 'ni%s_3c50_tot' % obsid
-	bkgspec_name = 'ni%s_3c50_bkg' % obsid	
-	totspec = '%s/%s/spec/%s.pi' % (outdir,obsid,totspec_name)
-	bkgspec = '%s/%s/spec/%s.pi' % (outdir,obsid,bkgspec_name)
-
-	param_dict = {}
-	param_dict["ratechk_total"] = {}
-	for eband in param['ratechk_energy_bands']:
-		emin,emax = param['ratechk_energy_bands'][eband]
-		cmd  = 'rm -f tmp.log;\n'
-		cmd += "extract_xspec_rate.py "
-		cmd += "%s " % totspec
-		cmd += "%s " % param['xspec_rmf']
-		cmd += "%s " % param['xspec_arf']	
-		cmd += "%s " % emin
-		cmd += "%s " % emax
-		cmd += "--keyword R%s " % eband	 	
-		cmd += "> tmp.log\n"
-		print(cmd)
-		os.system(cmd)
-
-		#with open('tmp.log', mode='rt', encoding='utf-8') as f:
-		#	read_data = list(f)
-		#src_rate  = float(read_data[-2].split(":")[-1])
-		##src_error = float(read_data[-1].split(":")[-1])	
-		#print("src",src_rate,src_error)
-
-		cmd  = 'rm -f tmp.log;\n'
-		cmd += "extract_xspec_rate.py "
-		cmd += "%s " % bkgspec
-		cmd += "%s " % param['xspec_rmf']
-		cmd += "%s " % param['xspec_arf']	
-		cmd += "%s " % emin		
-		cmd += "%s " % emax	
-		cmd += "--keyword R%s " % eband	 
-		cmd += "> tmp.log\n"
-		print(cmd)
-		os.system(cmd)
-
-		#with open('tmp.log', mode='rt', encoding='utf-8') as f:
-		#	read_data = list(f)
-		#bkg_rate  = float(read_data[-2].split(":")[-1])
-		#bkg_error = float(read_data[-1].split(":")[-1])	
-		#print("bkg",bkg_rate,bkg_error)	
-
-		#sub_rate = float('%.6f' % (src_rate - bkg_rate))
-		#sub_error = float('%.6f' % (np.sqrt(src_error*src_error+bkg_error*bkg_error)))
-		#print("sub",sub_rate,sub_error)
-
-		#param_dict["ratechk_total"][eband] = [src_rate,src_error,bkg_rate,bkg_error,sub_rate,sub_error]
-
-		cmd = 'rm -f tmp.log'
-		print(cmd);os.system(cmd)
-
-	fparam = '%s/%s/param/ni%s.yaml' % (outdir,obsid,obsid)
-	with open(fparam, 'w') as file:
-		documents = yaml.dump(param_dict, file)	
-"""		
+			niobsid.fit_of_segment()

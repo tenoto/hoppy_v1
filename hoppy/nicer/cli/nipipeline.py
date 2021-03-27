@@ -38,7 +38,10 @@ def main(args=None):
 	nielf.run_nibackgen3C50()
 	nielf.plot_lightcurve()
 	nielf.run_barycorr()
-	nielf.devide_to_gti()
+	nielf.devide_to_segment()
+	nielf.fit_of_segment()
+
+	nielf.show_dataframe_summay()
 
 if __name__=="__main__":
 	main()

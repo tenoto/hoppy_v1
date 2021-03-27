@@ -33,8 +33,8 @@ class XspecPha():
 	def __init__(self,phafile,outdir='out',
 		backgrnd=None,rmffile=None,arffile=None,modelxcm=None,
 		binminsig=5,binmaxbin=50,fitemin=0.4,fitemax=10.0,
-		plotxmin=0.4,plotxmax=10.0,plotymin=1e-4,plotymax=1e+4,
-		plotymineeuf=1e-4,plotymaxeeuf=10,ploty2min=-10.0,ploty2max=10.0,
+		plotxmin=0.4,plotxmax=10.0,plotymin=1e-5,plotymax=1e+4,
+		plotymineeuf=1e-5,plotymaxeeuf=10,ploty2min=-10.0,ploty2max=10.0,
 		ratebands=[[0.4,6.0],[1.0,10.0]],
 		fluxbands=[[0.4,6.0],[1.0,10.0]],
 		parerrnum=[1,2,5]):
