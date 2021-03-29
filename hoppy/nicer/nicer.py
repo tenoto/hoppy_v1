@@ -378,21 +378,27 @@ class NicerObsID():
 			segment_dir = '%s/ep%003d' % (suboutdir,segment_num)
 			print("----- segment_dir = %s" % segment_dir)
 			cmd  = 'mkdir -p %s;\n' % segment_dir
-			cmd += 'cp %s %s/tmp_sel.gti;\n' % (segment_gti,segment_dir)
-			if segment_num == 1:
-				if number_of_segment == 2:
-					#cmd += 'ftdelrow %s/tmp_sel.gti+1 none 2-2 confirm=YES;\n' % (segment_dir)
-					cmd += 'fdelrow %s/tmp_sel.gti+1 2 1 Y Y;\n' % (segment_dir)
-				else:
-					cmd += 'ftdelrow %s/tmp_sel.gti+1 none %d- confirm=YES;\n' % (segment_dir,segment_num+1)					
-			elif segment_num == number_of_segment:
-				if number_of_segment == 2:
-					cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1 confirm=YES;\n' % (segment_dir)
-				else:
-					cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1-%d confirm=YES;\n' % (segment_dir,segment_num-1)	
-			else:
-				cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1-%d,%d- confirm=YES;\n' % (segment_dir,segment_num-1,segment_num+1)
+			#cmd += 'cp %s %s/tmp_sel.gti;\n' % (segment_gti,segment_dir)
 			print(cmd);os.system(cmd)
+
+			#if segment_num == 1:
+			#	if number_of_segment == 2:
+			#		#cmd += 'ftdelrow %s/tmp_sel.gti+1 none 2-2 confirm=YES;\n' % (segment_dir)
+			#		cmd += 'fdelrow %s/tmp_sel.gti+1 2 1 Y Y;\n' % (segment_dir)
+			#	else:
+			#		cmd += 'ftdelrow %s/tmp_sel.gti+1 none %d- confirm=YES;\n' % (segment_dir,segment_num+1)					
+			#elif segment_num == number_of_segment:
+			#	if number_of_segment == 2:
+			#		cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1 confirm=YES;\n' % (segment_dir)
+			#	else:
+			#		cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1-%d confirm=YES;\n' % (segment_dir,segment_num-1)	
+			#else:
+			#	cmd += 'ftdelrow %s/tmp_sel.gti+1 none 1-%d,%d- confirm=YES;\n' % (segment_dir,segment_num-1,segment_num+1)
+			#print(cmd);os.system(cmd)
+			hdu = fits.open(segment_gti)
+			hdu['GTI'].data = hdu['GTI'].data[[i]]
+			#hdu = fits.BinTableHDU.from_columns(fits.ColDefs(hdu['GTI'].data.columns))
+			hdu.writeto('%s/tmp_sel.gti' % segment_dir)
 
 			segment_basename = 'ni%s_0mpu7_cl_ep%03d' % (self.obsid,segment_num)
 			segment_fitsfile = '%s.evt' % segment_basename
