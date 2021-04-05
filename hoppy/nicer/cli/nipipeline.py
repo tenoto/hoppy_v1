@@ -2,7 +2,7 @@
 
 import argparse
 
-from hoppy.nicer.nicer import NicerElf
+from hoppy.nicer.nicer import NicerManager
 
 __author__ = 'Teruaki Enoto'
 __version__ = '0.01'
@@ -32,16 +32,16 @@ def main(args=None):
 	parser = get_parser()
 	args = parser.parse_args(args)
 
-	nielf = NicerElf(setup_yamlfile=args.setup_yamlfile,obsid_lstfile=args.obsid_lstfile)
-	nielf.make_directory()
-	nielf.run_nicerl2()	
-	nielf.run_nibackgen3C50()
-	nielf.plot_lightcurve()
-	nielf.run_barycorr()
-	nielf.devide_to_segment()
-	nielf.fit_of_segment()
+	niman = NicerManager(setup_yamlfile=args.setup_yamlfile,obsid_lstfile=args.obsid_lstfile)
+	niman.make_directory()
+	niman.run_nicerl2()	
+	niman.run_nibackgen3C50()
+	niman.plot_lightcurve()
+	#niman.run_barycorr()
+	niman.devide_to_segment()
+	#niman.fit_of_segment()
 
-	nielf.show_dataframe_summay()
+	#niman.show_dataframe_summay()
 
 if __name__=="__main__":
 	main()
