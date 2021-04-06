@@ -284,9 +284,9 @@ class NicerObsID():
 		cmd += 'ln -s %s/{auxil,log} %s/;\n' % (self.indir,self.outdir)
 		cmd += 'ln -s %s/xti/{event_uf,hk} %s/xti/;\n' % (self.indir,self.outdir)	
 		print(cmd);os.system(cmd)
-		self.dump_setup_to_yamlfile()
+		#self.dump_setup_to_yamlfile()
 		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
-		return 0 
+		#return 0 
 
 	def dump_setup_to_yamlfile(self):
 		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
@@ -303,7 +303,6 @@ class NicerObsID():
 		with open(self.setup_yamlfile, "a") as wf:
 			yaml.dump(output_dict, wf, default_flow_style=False)		
 		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
-		return 0
 
 	def run_nicerl2(self):
 		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
@@ -582,17 +581,22 @@ class NicerProcessLog():
 		self.csvfile = csvfile
 		self.htmlfile = os.path.splitext(self.csvfile)[0] + '.html'
 
+		self.columns = ['mkdir','nicerl2','3c50','lcurve','div2seg','dir','spec','lc','seg']
+		self.dict_null = {}
+		for col in self.columns:
+			self.dict_null[col] = None
+
 		if os.path.exists(self.csvfile):
 			print("...reading %s." % self.csvfile )
-			self.df = pd.read_csv(csvfile,index_col=0)
-			#self.df.dtype=str
-			self.df = self.df.astype(str)
+			self.df = pd.read_csv(csvfile,dtype={'ObsID':str})
+			self.df.set_index('ObsID',inplace=True)
 		else:
 			print("...making a new process log.")
 			self.df = pd.DataFrame(
-				columns=['ObsID','dir','nicerl2','3c50','lcurve','segment','directory','spec','lc'],
-				dtype=str,
+				columns=self.columns+['ObsID'],
+				dtype=str
 				)
+			self.df.set_index('ObsID',inplace=True)
 		self.show()
 
 	def show(self):
@@ -661,19 +665,23 @@ class NicerManager():
 
 		# --- initialization proclog ---
 		self.proclog = NicerProcessLog('%s/nipipeline_proclog.csv' % self.param['output_directory'])
-		print(self.proclog.df['ObsID'])
 		for niobsid in self.nicerobs_lst:
-			if str(niobsid.obsid) in list(self.proclog.df['ObsID']):
+			if str(niobsid.obsid) in list(self.proclog.df.index.tolist()):
 				print('...ObsID %s is already in the existing list.' % niobsid.obsid)
 				continue
 			else:
 				print('...ObsID %s is newly added to the existing list.' % niobsid.obsid)
-				self.proclog.df = self.proclog.df.append({'ObsID':str(niobsid.obsid)}, ignore_index=True)
+				#self.proclog.df = self.proclog.df.append({'ObsID':str(niobsid.obsid)}, ignore_index=True)
+				row = pd.Series(self.proclog.dict_null,name=str(niobsid.obsid))
+				self.proclog.df = self.proclog.df.append(row)
+				print(self.proclog.df)
 		self.proclog.show()			
 
 		if not os.path.exists(self.param["output_directory"]):
 			cmd = 'mkdir -p %s' % self.param["output_directory"]
 			print(cmd);os.system(cmd)
+		self.proclog.show()			
+
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -682,25 +690,22 @@ class NicerManager():
 		if not self.param['flag_make_directory']:
 			print("skip ... since flag_make_directory is %s" % self.param['flag_make_directory']) 
 			return 0		
-		dict_flag = {}
-		dict_output = {}
-		for niobsid in self.nicerobs_lst:
-			flag_dir = str(self.proclog.df[self.proclog.df['ObsID'] == niobsid.obsid]['dir'][0])
-			if self.param['flag_process_overwrite'] == False and flag_dir == 'True':
+
+		for niobsid in self.nicerobs_lst:			
+			flag = str(self.proclog.df.at[niobsid.obsid,'mkdir'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
+
 			try:
 				niobsid.make_directory()
 				flag = True
-				output = '<a href="./%s">dir</a>' % (niobsid.outdir.replace(self.param['output_directory'],''))
+				self.proclog.df.at[niobsid.obsid,'mkdir'] = True		
+				self.proclog.df.at[niobsid.obsid,'dir'] = '<a href="./%s">dir</a>' % (niobsid.outdir.replace(self.param['output_directory'],''))
 			except:
 				flag = False
-				output = 'ERROR'
-			dict_flag[flag] = niobsid.obsid
-			dict_output[output] = niobsid.obsid
-		if len(dict_flag) > 0:
-			self.proclog.df['dir'] = dict_flag			
-			self.proclog.df['directory'] = dict_output
+				self.proclog.df.at[niobsid.obsid,'dir'] = 'ERROR'
+		
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -709,21 +714,18 @@ class NicerManager():
 		if not self.param['flag_run_nicerl2']:
 			print("skip ... since flag_run_nicerl2 is %s" % self.param['flag_run_nicerl2']) 
 			return 0
-		dict_flag = {}						
+		
 		for niobsid in self.nicerobs_lst:
-			flag_nicerl2 = str(self.proclog.df[self.proclog.df['ObsID'] == niobsid.obsid]['nicerl2'][0])
-			if self.param['flag_process_overwrite'] == False and flag_nicerl2 == 'True':
+			flag = str(self.proclog.df.at[niobsid.obsid,'nicerl2'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
 
 			try:
 				niobsid.run_nicerl2()
-				flag = True
+				self.proclog.df.at[niobsid.obsid,'nicerl2'] = True		
 			except:
-				flag = False
-			dict_flag[flag] = niobsid.obsid
-		if len(dict_flag) > 0:
-			self.proclog.df['nicerl2'] = dict_flag
+				self.proclog.df.at[niobsid.obsid,'nicerl2'] = False				
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -733,28 +735,19 @@ class NicerManager():
 			print("skip ... since flag_run_nibackgen3C50 is %s" % self.param['flag_run_nibackgen3C50']) 
 			return 0	
 
-		dict_flag = {}		
-		dict_output = {}		
 		for niobsid in self.nicerobs_lst:
-			flag_spec = str(self.proclog.df[self.proclog.df['ObsID'] == niobsid.obsid]['3c50'][0])
-			if self.param['flag_process_overwrite'] == False and flag_spec == 'True':
+			flag = str(self.proclog.df.at[niobsid.obsid,'3c50'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
 
 			try:
 				niobsid.run_nibackgen3C50()
-				flag = True
-				output = '<a href="./%s">dir</a>' % (niobsid.spec_pdf.replace(self.param['output_directory'],''))				
+				self.proclog.df.at[niobsid.obsid,'3c50'] = True	
+				self.proclog.df.at[niobsid.obsid,'spec'] = '<a href="./%s">dir</a>' % (niobsid.spec_pdf.replace(self.param['output_directory'],''))
 			except:
-				flag = False
-				output = 'ERROR'
-			dict_flag[flag] = niobsid.obsid
-			dict_output[output] = niobsid.obsid
-
-		if len(dict_flag) > 0:
-			self.proclog.df['3c50'] = dict_flag
-			self.proclog.df['spec'] = dict_output
-
+				self.proclog.df.at[niobsid.obsid,'3c50'] = False		
+				self.proclog.df.at[niobsid.obsid,'spec'] = 'ERROR'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -764,28 +757,19 @@ class NicerManager():
 			print("skip ... since flag_plot_lightcurve is %s" % self.param['flag_plot_lightcurve']) 
 			return 0	
 
-		dict_flag = {}		
-		dict_output = {}		
 		for niobsid in self.nicerobs_lst:
-			flag_lc = str(self.proclog.df[self.proclog.df['ObsID'] == niobsid.obsid]['lc'][0])
-			if self.param['flag_process_overwrite'] == False and flag_lc == 'True':
+			flag = str(self.proclog.df.at[niobsid.obsid,'lcurve'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
 
 			try:
 				niobsid.plot_lightcurve()
-				flag = True
-				output = '<a href="./%s">dir</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = True
+				self.proclog.df.at[niobsid.obsid,'lc'] = '<a href="./%s">dir</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
 			except:
-				flag = False
-				output = 'ERROR'
-			dict_flag[flag] = niobsid.obsid
-			dict_output[output] = niobsid.obsid
-
-		if len(dict_flag) > 0:
-			self.proclog.df['lcurve'] = dict_flag
-			self.proclog.df['lc'] = dict_output
-
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = False	
+				self.proclog.df.at[niobsid.obsid,'lc'] = 'ERROR'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()			
 
@@ -795,33 +779,23 @@ class NicerManager():
 			print("skip ... since flag_devide_to_segment is %s" % self.param['flag_devide_to_segment']) 
 			return 0		
 
-		dict_flag = {}		
-		dict_output = {}		
 		for niobsid in self.nicerobs_lst:
-			flag_segment = str(self.proclog.df[self.proclog.df['ObsID'] == niobsid.obsid]['segment'][0])
-			if self.param['flag_process_overwrite'] == False and flag_segment == 'True':
+			flag = str(self.proclog.df.at[niobsid.obsid,'div2seg'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
 
-			niobsid.devide_to_segment()
-		"""
+			#niobsid.devide_to_segment()
 			try:
 				niobsid.devide_to_segment()
-				flag = True
-				#output = '<a href="./%s">dir</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = True
+				self.proclog.df.at[niobsid.obsid,'seg'] = '<a href="./%s">dir</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
 			except:
-				flag = False
-				#output = 'ERROR'
-			dict_flag[flag] = niobsid.obsid
-			#dict_output[output] = niobsid.obsid
-
-		if len(dict_flag) > 0:
-			self.proclog.df['segment'] = dict_flag
-			#self.proclog.df['lc'] = dict_output
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = False
+				self.proclog.df.at[niobsid.obsid,'seg'] = 'ERROR'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
-		"""
 
 
 """
