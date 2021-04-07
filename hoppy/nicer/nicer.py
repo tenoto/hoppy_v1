@@ -10,6 +10,7 @@ from time import sleep
 
 from astropy.io import fits
 from astropy.time import Time
+from astropy.stats import bayesian_blocks
 
 def nibackgen3C50(outdir,basename,totspec_name,bkgspec_name,
 		bkgidxdir,bkglibdir,gainepoch,
@@ -242,6 +243,66 @@ def plot_lcurve(eventfile,outdir,lc_energy_bands,lc_time_bin_sec):
 
 	print("\n[func:%s] Done" % sys._getframe().f_code.co_name)
 
+def barycen(evtfile,outfile,outdir,orbfile,ra,dec,overwrite=False):
+	print("\n[func:%s]" % sys._getframe().f_code.co_name)
+
+	if overwrite:
+		cmd  = 'rm -rf %s;\n' % outdir
+		cmd += 'mkdir -p %s\n' % outdir
+	else:
+		cmd = 'mkdir -p %s\n' % outdir
+	print(cmd);os.system(cmd)
+
+	baryevt = '%s/%s' % (outdir,outfile)
+	basename = os.path.splitext(os.path.basename(outfile))[0]
+	fcmd = '%s/barycorr_%s.sh' % (outdir,basename)
+	flog = '%s/barycorr_%s.log' % (outdir,basename)
+	f = open(fcmd,'w')
+	dump  = '#!/bin/sh -f\n'
+	dump += 'barycorr infile=%s ' % evtfile
+	dump += 'outfile=%s ' % baryevt
+	dump += 'orbitfiles=%s ' % orbfile 
+	dump += 'ra=%.6f dec=%.6f ' % (ra,dec)
+	dump += 'refframe=ICRS ephem=JPLEPH.430 '
+	dump += '> %s 2>&1 ' % flog
+	dump += '\n'
+	f.write(dump)
+	f.close()	
+
+	# run the script.
+	cmd  = 'chmod +x %s\n' % fcmd
+	cmd += './%s' % fcmd
+	print(cmd);os.system(cmd)		
+	print("\n[func:%s] Done" % sys._getframe().f_code.co_name)
+	return 0 
+
+def fit_xspec(phafile,indir,backgrnd,rmffile,arffile,modelxcm,
+	binminsig,binmaxbin,fitemin,fitemax,ratebands,fluxbands):
+	print("\n[func:%s]" % sys._getframe().f_code.co_name)
+
+	outdir = '%s/fit' % indir
+	cmd = 'rm -rf %s' % outdir
+	print(cmd);os.system(cmd)
+
+	cmd  = 'xspec_fit.py '
+	cmd += '%s ' % phafile
+	cmd += '-o %s ' % outdir
+	cmd += '-b %s ' % backgrnd
+	cmd += '-r %s ' % rmffile
+	cmd += '-a %s ' % arffile
+	cmd += '-m %s ' % modelxcm
+	cmd += '-s %d -n %d ' % (binminsig,binmaxbin)
+	cmd += '--fitemin %.1f --fitemax %.1f ' % (fitemin,fitemax)
+	cmd += '--rateband %s ' % ratebands
+	cmd += '--fluxband %s \n' % fluxbands
+	print(cmd);os.system(cmd)
+
+	basename = os.path.splitext(os.path.basename(phafile))[0]
+	fit_pdf = glob.glob('%s_*_fit.pdf' % basename)[0]
+
+	print("\n[func:%s] Done" % sys._getframe().f_code.co_name)
+	return fit_pdf	
+
 class NicerObsID():
 	def __init__(self,obsid,indir,outdir,param):
 		self.param = param; 
@@ -249,6 +310,10 @@ class NicerObsID():
 		self.indir = indir; 
 		self.outdir = outdir; 
 		print("[NicerObsID %s] A new NicerObs is generated" % self.obsid)
+
+		self.orbitfile = "%s/auxil/ni%s.orb.gz" % (self.outdir,self.obsid)
+		self.totspec = '%s/spec/ni%s_3c50_ave_tot.pi' % (self.outdir,self.obsid)
+		self.bkgspec = '%s/spec/ni%s_3c50_ave_bkg.pi' % (self.outdir,self.obsid)		
 
 		#self.errorlog = '%s/errorlog.txt' % self.param['output_directory']
 		self.setup_yamlfile = '%s/ni%s_result.yaml' % (self.outdir,self.obsid)
@@ -356,11 +421,9 @@ class NicerObsID():
 			rmf=self.param['xspec_rmf'],
 			arf=self.param['xspec_arf'])
 
-		totspec = '%s/spec/ni%s_3c50_ave_tot.pi' % (self.outdir,self.obsid)
-		bkgspec = '%s/spec/ni%s_3c50_ave_bkg.pi' % (self.outdir,self.obsid)		
 		plot_xspec(
-			totspec=totspec,
-			bkgspec=bkgspec,
+			totspec=self.totspec,
+			bkgspec=self.bkgspec,
 			xspec_rebin_sigma=self.param['xspec_rebin_sigma'],
 			xspec_rebin_maxnum=self.param['xspec_rebin_maxnum'],
 			xspec_emin=self.param['xspec_emin'],
@@ -369,6 +432,27 @@ class NicerObsID():
 			xspec_ymin=self.param['xspec_ymin'],
 			xspec_ymax=self.param['xspec_ymax'])
 		self.spec_pdf = '%s/spec/ni%s_3c50_ave_tot.pdf' % (self.outdir,self.obsid)
+
+		self.dump_setup_to_yamlfile()
+		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
+		return 0
+
+	def fit_avespec(self):
+		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
+		fversion = os.popen('fversion').read().rstrip()		
+
+		self.fit_avespec_pdf = fit_xspec(
+			phafile=self.totspec,
+			indir=self.outdir,
+			backgrnd=self.bkgspec,
+			rmffile=self.param['xspec_rmf'],
+			arffile=self.param['xspec_arf'],
+			modelxcm=self.param['xspec_model'],
+			binminsig=self.param['xspec_rebin_sigma'],binmaxbin=self.param['xspec_rebin_maxnum'],
+			fitemin=self.param['xspec_emin'],fitemax=self.param['xspec_emax'],
+			ratebands=self.param['xspec_rateband'],fluxbands=self.param['xspec_fluxband'])
+		print(self.fit_avespec_pdf)
+
 		self.dump_setup_to_yamlfile()
 		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0
@@ -386,16 +470,15 @@ class NicerObsID():
 		self.lc_pdf = '%s/lc/ni%s_0mpu7_cl_ene.pdf' % (self.outdir,self.obsid)
 
 		self.dump_setup_to_yamlfile()
-
 		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0		
 
 	def devide_to_segment(self):
 		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
-		suboutdir = '%s/segment' % self.outdir
-		cmd  = 'rm -rf %s;\n' % suboutdir
-		cmd += 'mkdir -p %s\n' % suboutdir
+		self.dir_segment_main = '%s/segment' % self.outdir
+		cmd  = 'rm -rf %s;\n' % self.dir_segment_main
+		cmd += 'mkdir -p %s\n' % self.dir_segment_main
 		print(cmd);os.system(cmd)
 
 		# re-arrange GTIs
@@ -403,17 +486,17 @@ class NicerObsID():
 		print(cmd);os.system(cmd)
 
 		# convert text file GTI format to fits file.
-		segment_gti = '%s/ni%s_segment.gti' % (suboutdir,self.obsid)
+		segment_gti = '%s/ni%s_segment.gti' % (self.dir_segment_main,self.obsid)
 		cmd = 'fconv_txt2gti.py -i tmp_gti.txt -o %s; rm -f tmp_gti.txt' % segment_gti 
 		print(cmd);os.system(cmd)
 
 		hdu = fits.open(segment_gti)
-		number_of_segment = len(hdu['GTI'].data)
+		self.number_of_segment = len(hdu['GTI'].data)
 
 		self.nigsegment_list = []
-		for i in range(number_of_segment):
+		for i in range(self.number_of_segment):
 			segment_num = i + 1 
-			segment_dir = '%s/segment%003d' % (suboutdir,segment_num)
+			segment_dir = '%s/segment%003d' % (self.dir_segment_main,segment_num)
 			print("----- segment_dir = %s" % segment_dir)
 			cmd  = 'mkdir -p %s;\n' % segment_dir
 			print(cmd);os.system(cmd)
@@ -449,27 +532,38 @@ class NicerObsID():
 			nisegment.run_nibackgen3C50()
 			self.nigsegment_list.append(nisegment)
 
-		"""
-		self.df_summary = pd.DataFrame(columns=['ObsID','segment','lc','spec'])
-		#for i in range(number_of_segment):
-		for nisegment in self.nigsegment_list:
-			if nisegment.lc_pdf == None:
-				lc_link = 'N/A'
-			else:
-				lc_link = '<a href="./%s">pdf</a>' % nisegment.lc_pdf.replace(suboutdir,'')
-			if nisegment.spec_pdf == None:
-				spec_link = 'N/A'
-			else:
-				spec_link = '<a href="./%s">pdf</a>' % nisegment.spec_pdf.replace(suboutdir,'')			
-			self.df_summary = self.df_summary.append({'ObsID':self.obsid,
-				'segment':nisegment.segment_num,
-				'lc':lc_link,'spec':spec_link}, ignore_index=True)
 
-		self.show_dataframe_summay()
-		self.write_dataframe_summary()
-		"""
+		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
+		return 0
+
+	def run_barycorr(self):
+		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
+
+		basename = os.path.splitext(os.path.basename(self.clevt))[0]
+		if self.param['barycorr_RA_deg'] == "None":
+			self.param['barycorr_RA_deg'] = float(hdu['EVENTS'].header['RA_OBJ'])
+		if self.param['barycorr_DEC_deg'] == "None":
+			self.param['barycorr_DEC_deg'] = float(hdu['EVENTS'].header['DEC_OBJ'])		
+		barycen(
+			evtfile=self.clevt,
+			outfile=basename+'_bary.evt',
+			outdir=self.outdir+'/bary',
+			orbfile=self.orbitfile,
+			ra=self.param['barycorr_RA_deg'],dec=self.param['barycorr_DEC_deg'],
+			overwrite=True)
+
+		self.dump_setup_to_yamlfile()
 		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0		
+
+	def fit_of_segment(self):
+		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
+
+		for nisegment in self.nigsegment_list:
+			print(nisegment)
+
+		print("\n[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
+		return 0
 
 class NicerSegment():
 	def __init__(self,parent_nicerobsid,
@@ -581,7 +675,7 @@ class NicerProcessLog():
 		self.csvfile = csvfile
 		self.htmlfile = os.path.splitext(self.csvfile)[0] + '.html'
 
-		self.columns = ['mkdir','nicerl2','3c50','lcurve','div2seg','dir','spec','lc','seg']
+		self.columns = ['dir','spec','lc','seg','mkdir','nicerl2','3c50','fit','lcurve','bary','div2seg','fit2seg']
 		self.dict_null = {}
 		for col in self.columns:
 			self.dict_null[col] = None
@@ -691,6 +785,7 @@ class NicerManager():
 			print("skip ... since flag_make_directory is %s" % self.param['flag_make_directory']) 
 			return 0		
 
+		self.proclog.df['mkdir'] = self.proclog.df['mkdir'].astype(str)
 		for niobsid in self.nicerobs_lst:			
 			flag = str(self.proclog.df.at[niobsid.obsid,'mkdir'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
@@ -699,11 +794,9 @@ class NicerManager():
 
 			try:
 				niobsid.make_directory()
-				flag = True
-				self.proclog.df.at[niobsid.obsid,'mkdir'] = True		
+				self.proclog.df.at[niobsid.obsid,'mkdir'] = 'True'		
 				self.proclog.df.at[niobsid.obsid,'dir'] = '<a href="./%s">dir</a>' % (niobsid.outdir.replace(self.param['output_directory'],''))
 			except:
-				flag = False
 				self.proclog.df.at[niobsid.obsid,'dir'] = 'ERROR'
 		
 		self.proclog.write_to_csvfile()
@@ -715,6 +808,7 @@ class NicerManager():
 			print("skip ... since flag_run_nicerl2 is %s" % self.param['flag_run_nicerl2']) 
 			return 0
 		
+		self.proclog.df['nicerl2'] = self.proclog.df['nicerl2'].astype(str)
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'nicerl2'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
@@ -723,9 +817,9 @@ class NicerManager():
 
 			try:
 				niobsid.run_nicerl2()
-				self.proclog.df.at[niobsid.obsid,'nicerl2'] = True		
+				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'True'
 			except:
-				self.proclog.df.at[niobsid.obsid,'nicerl2'] = False				
+				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'False'				
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -735,6 +829,7 @@ class NicerManager():
 			print("skip ... since flag_run_nibackgen3C50 is %s" % self.param['flag_run_nibackgen3C50']) 
 			return 0	
 
+		self.proclog.df['3c50'] = self.proclog.df['3c50'].astype(str)
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'3c50'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
@@ -743,11 +838,34 @@ class NicerManager():
 
 			try:
 				niobsid.run_nibackgen3C50()
-				self.proclog.df.at[niobsid.obsid,'3c50'] = True	
+				self.proclog.df.at[niobsid.obsid,'3c50'] = 'True'	
 				self.proclog.df.at[niobsid.obsid,'spec'] = '<a href="./%s">dir</a>' % (niobsid.spec_pdf.replace(self.param['output_directory'],''))
 			except:
-				self.proclog.df.at[niobsid.obsid,'3c50'] = False		
+				self.proclog.df.at[niobsid.obsid,'3c50'] = 'False'		
 				self.proclog.df.at[niobsid.obsid,'spec'] = 'ERROR'
+		self.proclog.write_to_csvfile()
+		self.proclog.write_to_htmlfile()
+
+	def fit_avespec(self):
+		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_fit_avespec']:
+			print("skip ... since flag_run_nibackgen3C50 is %s" % self.param['flag_fit_avespec']) 
+			return 0	
+
+		self.proclog.df['fit'] = self.proclog.df['fit'].astype(str)
+		for niobsid in self.nicerobs_lst:
+			flag = str(self.proclog.df.at[niobsid.obsid,'fit'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
+				print("...skip, already processed.")
+				continue
+
+			try:
+				niobsid.fit_avespec()
+				self.proclog.df.at[niobsid.obsid,'fit'] = 'True'	
+				#self.proclog.df.at[niobsid.obsid,'spec'] = '<a href="./%s">dir</a>' % (niobsid.spec_pdf.replace(self.param['output_directory'],''))
+			except:
+				self.proclog.df.at[niobsid.obsid,'fit'] = 'False'		
+				#self.proclog.df.at[niobsid.obsid,'spec'] = 'ERROR'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -757,6 +875,7 @@ class NicerManager():
 			print("skip ... since flag_plot_lightcurve is %s" % self.param['flag_plot_lightcurve']) 
 			return 0	
 
+		self.proclog.df['lcurve'] = self.proclog.df['lcurve'].astype(str)
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'lcurve'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
@@ -765,13 +884,35 @@ class NicerManager():
 
 			try:
 				niobsid.plot_lightcurve()
-				self.proclog.df.at[niobsid.obsid,'lcurve'] = True
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'True'
 				self.proclog.df.at[niobsid.obsid,'lc'] = '<a href="./%s">dir</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
 			except:
-				self.proclog.df.at[niobsid.obsid,'lcurve'] = False	
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'False'	
 				self.proclog.df.at[niobsid.obsid,'lc'] = 'ERROR'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()			
+
+	def run_barycorr(self):
+		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_run_barycorr']:
+			print("skip ... since flag_devide_to_segment is %s" % self.param['flag_run_barycorr']) 
+			return 0		
+
+		self.proclog.df['bary'] = self.proclog.df['bary'].astype(str)
+		for niobsid in self.nicerobs_lst:
+			flag = str(self.proclog.df.at[niobsid.obsid,'bary'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
+				print("...skip, already processed.")
+				continue
+
+			try:
+				niobsid.run_barycorr()
+				self.proclog.df.at[niobsid.obsid,'bary'] = 'True'
+			except:
+				self.proclog.df.at[niobsid.obsid,'bary'] = 'False'	
+
+		self.proclog.write_to_csvfile()
+		self.proclog.write_to_htmlfile()	
 
 	def devide_to_segment(self):
 		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
@@ -779,74 +920,50 @@ class NicerManager():
 			print("skip ... since flag_devide_to_segment is %s" % self.param['flag_devide_to_segment']) 
 			return 0		
 
+		self.proclog.df['div2seg'] = self.proclog.df['div2seg'].astype(str)
+		self.proclog.df['seg'] = self.proclog.df['seg'].astype(str)		
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'div2seg'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
 
-			#niobsid.devide_to_segment()
 			try:
 				niobsid.devide_to_segment()
-				self.proclog.df.at[niobsid.obsid,'div2seg'] = True
-				self.proclog.df.at[niobsid.obsid,'seg'] = '<a href="./%s">dir</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'seg'] = '%d (<a href="./%s">dir</a>)' % (niobsid.number_of_segment, niobsid.dir_segment_main.replace(self.param['output_directory'],''))
 			except:
-				self.proclog.df.at[niobsid.obsid,'div2seg'] = False
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'False'	
 				self.proclog.df.at[niobsid.obsid,'seg'] = 'ERROR'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
 
+	def fit_of_segment(self):
+		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_fit_of_segment']:
+			print("skip ... since fit_of_segment is %s" % self.param['flag_fit_of_segment']) 
+			return 0		
+
+		self.proclog.df['fit2seg'] = self.proclog.df['fit2seg'].astype(str)
+		for niobsid in self.nicerobs_lst:
+			flag = str(self.proclog.df.at[niobsid.obsid,'fit2seg'])
+			if self.param['flag_process_overwrite'] == False and flag == 'True':
+				print("...skip, already processed.")
+				continue
+
+			try:
+				niobsid.fit_of_segment()
+				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'True'
+			except:
+				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'False'	
+
+		self.proclog.write_to_csvfile()
+		self.proclog.write_to_htmlfile()	
 
 """
 class NicerObsID
-	def run_barycorr(self):
-		print("\n[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
-		suboutdir = '%s/bary' % self.outdir
-		cmd  = 'rm -rf %s;\n' % suboutdir
-		cmd += 'mkdir -p %s\n' % suboutdir
-		print(cmd);os.system(cmd)
-
-		if not self.flag_clevt_has_events:
-			flog = '%s/barycorr_%s.log' % (suboutdir,self.obsid)
-			f = open(flog,'w')
-			message = 'no cleaned event in the original file %s' % self.clevt
-			print(message)
-			f.write(message)
-			f.close()
-			return -1 
-
-		clevt = '%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (self.outdir,self.obsid)
-		hdu = fits.open(clevt)
-		if self.param['barycorr_RA_deg'] == "None":
-			self.param['barycorr_RA_deg'] = float(hdu['EVENTS'].header['RA_OBJ'])
-		if self.param['barycorr_DEC_deg'] == "None":
-			self.param['barycorr_DEC_deg'] = float(hdu['EVENTS'].header['DEC_OBJ'])
-		print(self.param['barycorr_RA_deg'])
-		print(self.param['barycorr_DEC_deg'])		
-
-		baryevt = '%s/ni%s_0mpu7_cl_bary.evt' % (suboutdir,self.obsid)
-		fcmd = '%s/barycorr_%s.sh' % (suboutdir,self.obsid)
-		flog = '%s/barycorr_%s.log' % (suboutdir,self.obsid)
-		f = open(fcmd,'w')
-		dump  = '#!/bin/sh -f\n'
-		dump += 'barycorr infile=%s ' % clevt
-		dump += 'outfile=%s ' % baryevt
-		dump += 'orbitfiles="%s/auxil/ni%s.orb.gz" ' % (self.outdir,self.obsid)
-		dump += 'ra=%.6f dec=%.6f ' % (self.param['barycorr_RA_deg'],self.param['barycorr_DEC_deg'])
-		dump += 'refframe=ICRS ephem=JPLEPH.430 '
-		dump += '> %s 2>&1 ' % flog
-		dump += '\n'
-		f.write(dump)
-		f.close()	
-
-		# run the script.
-		cmd  = 'chmod +x %s\n' % fcmd
-		cmd += './%s' % fcmd
-		print(cmd);os.system(cmd)	
-
-		self.dump_setup_to_yamlfile()
 
 
 	def fit_of_segment(self):
@@ -886,62 +1003,5 @@ class NicerObsID
 		self.show_dataframe_summay()
 		self.write_dataframe_summary()			
 
-	def show_dataframe_summay(self):
-		print("******* summary ******")
-		print(self.df_summary)
-		print("**********************")		
 
-	def write_dataframe_summary(self):
-		self.summary_csv = '%s/segment/ni%s_segment.csv' % (self.outdir,self.obsid)
-		self.summary_html = '%s/segment/ni%s_segment.html' % (self.outdir,self.obsid)
-		self.df_summary.to_csv(self.summary_csv)
-
-		raw_html = self.df_summary.to_html(open(self.summary_html,'w'))
-		cmd = 'sed -e "s/&lt;/</g" %s > tmp.html' % self.summary_html
-		print(cmd);os.system(cmd)
-		cmd = 'sed -e "s/&gt;/>/g" tmp.html > tmp2.html' 
-		print(cmd);os.system(cmd)		
-		cmd = 'mv tmp2.html %s; rm -f tmp.html tmp2.html' % self.summary_html
-		print(cmd);os.system(cmd)		
-
-
-
-clss segment 
-
-
-	def fit_spectrum(self):
-		cmd  = 'xspec_fit.py '
-		cmd += '%s ' % self.totspec
-		cmd += '-o %s/fit ' % self.segment_dir
-		cmd += '-b %s ' % self.bkgspec
-		cmd += '-r %s ' % self.param['xspec_rmf']
-		cmd += '-a %s ' % self.param['xspec_arf']
-		cmd += '-m %s ' % self.param['xspec_model']
-		cmd += '-s %d -n %d ' % (self.param['xspec_rebin_sigma'],self.param['xspec_rebin_maxnum'])
-		cmd += '--fitemin %.1f --fitemax %.1f ' % (self.param['xspec_emin'],self.param['xspec_emax'])
-		cmd += '--rateband %s ' % self.param['xspec_rateband']
-		cmd += '--fluxband %s \n' % self.param['xspec_fluxband']
-		print(cmd);os.system(cmd)
-
-		self.fit_pdf = '%s/fit/%s.pdf' % (self.segment_dir,fspec)
-
-
-
-
-
-	def run_barycorr(self):
-		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
-		if not self.param['flag_run_barycorr']:
-			print("skip ... since flag_run_barycorr is %s" % self.param['flag_run_barycorr']) 
-			return 0			
-		for niobsid in self.nicerobs_lst:
-			niobsid.run_barycorr()
-
-	def fit_of_segment(self):
-		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
-		if not self.param['flag_fit_of_segment']:
-			print("skip ... since flag_fit_of_segment is %s" % self.param['flag_fit_of_segment']) 
-			return 0		
-		for niobsid in self.nicerobs_lst:
-			niobsid.fit_of_segment()
 """			

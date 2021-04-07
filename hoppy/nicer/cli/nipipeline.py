@@ -37,11 +37,10 @@ def main(args=None):
 	niman.run_nicerl2()	
 	niman.run_nibackgen3C50()
 	niman.plot_lightcurve()
-	#niman.run_barycorr()
+	niman.run_barycorr()
+	niman.fit_avespec()	
 	niman.devide_to_segment()
-	#niman.fit_of_segment()
-
-	#niman.show_dataframe_summay()
+	niman.fit_of_segment()
 
 if __name__=="__main__":
 	main()
