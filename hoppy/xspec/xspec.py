@@ -410,6 +410,8 @@ class XspecPha():
 		cmd += 'exit\n'
 		print(cmd);os.system(cmd)
 
+		print(tmp_log)
+
 		flag_show_pa = False
 		for line in open(self.flog_fit):
 			cols = line.split()

@@ -41,6 +41,9 @@ def main(args=None):
 	niman.fit_avespec()	
 	niman.devide_to_segment()
 	niman.fit_of_segment()
+	niman.devide_to_block()
+	niman.fit_of_block()
+
 
 if __name__=="__main__":
 	main()
