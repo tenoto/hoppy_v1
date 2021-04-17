@@ -469,7 +469,8 @@ class XspecPha():
 				param[key] = value 
 				print(key,value)
 	
-		self.fyaml_dump = '%s/%s.yaml' % (self.outdir,self.basename)
+		#self.fyaml_dump = '%s/%s.yaml' % (self.outdir,self.basename)
+		self.fyaml_dump = '%s/%s_fit.yaml' % (self.outdir,self.basename)
 		with open(self.fyaml_dump, "w") as wf:
 		    yaml.dump(param, wf,default_flow_style=False)		
 

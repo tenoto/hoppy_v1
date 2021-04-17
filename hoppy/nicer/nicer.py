@@ -216,7 +216,7 @@ def plot_lcurve(eventfile,outdir,lc_energy_bands,lc_time_bin_sec):
 	dump += 'nbint=%d ' % nbint
 	dump += 'outfile="%s" ' % flcfile 
 	dump += 'plotdnum=%s ' % len(lc_energy_bands)
-	dump += 'plot=yes plotdev="/xw" <<EOF\n'
+	dump += 'plot=yes plotdev="/null" <<EOF\n'
 	dump += 'lwid 5\n'
 	#dump += 'la ot %s\n' % title 
 	dump += 'lab rotate\n'
@@ -316,14 +316,38 @@ class NicerObsID():
 		self.outdir = outdir; 
 		print("**[NicerObsID %s] A new NicerObs is generated" % self.obsid)
 
+		self.clevt = '%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (self.outdir,self.obsid)		
+		self.ufaevt = '%s/xti/event_cl/ni%s_0mpu7_ufa.evt' % (self.outdir,self.obsid)		
 		self.orbitfile = "%s/auxil/ni%s.orb.gz" % (self.outdir,self.obsid)
 		self.totspec = '%s/spec/ni%s_3c50_ave_tot.pi' % (self.outdir,self.obsid)
 		self.bkgspec = '%s/spec/ni%s_3c50_ave_bkg.pi' % (self.outdir,self.obsid)		
 
+		self.total_number_of_block = 0
+
+		self.rate = None
+		self.rate_error = None
+		self.band_low = None
+		self.band_high = None
+
 		self.setup_yamlfile = '%s/ni%s_result.yaml' % (self.outdir,self.obsid)
 		self.have_event_files()
+		self.set_basic_information()
 		sleep(1) # this is needed, otherwise sometimes flag_clevt_has_events can not be ste.
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
+
+	def set_basic_information(self):
+		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))	
+		if os.path.exists(self.clevt):
+			hdu = fits.open(self.clevt)
+			self.date_obs = hdu['EVENTS'].header['DATE-OBS']
+			self.object = hdu['EVENTS'].header['OBJECT']
+			self.exposure = float(hdu['EVENTS'].header['EXPOSURE'])
+		else:
+			self.date_obs = None
+			self.object = None
+			self.exposure = None
+		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
+		return 0 
 
 	def set_nisegment_list(self):	
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))	
@@ -365,18 +389,18 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
 		self.flag_clevt_has_events = False
-		self.clevt = '%s/xti/event_cl/ni%s_0mpu7_cl.evt' % (self.outdir,self.obsid)		
 		if os.path.exists(self.clevt):
 			self.flag_exists_clevt = True
 			hdu = fits.open(self.clevt)
-			if len(hdu['EVENTS'].data) > 0:
+			self.num_of_clevt = len(hdu['EVENTS'].data)			
+			if self.num_of_clevt > 0:
 				self.flag_clevt_has_events = True
 			else:
 				self.flag_clevt_has_events = False
 		else:
 			self.flag_exists_clevt = False
+			self.num_of_clevt = None
 
-		self.ufaevt = '%s/xti/event_cl/ni%s_0mpu7_ufa.evt' % (self.outdir,self.obsid)		
 		if os.path.exists(self.ufaevt):
 			self.flag_exists_ufaevt = True
 		else:
@@ -439,6 +463,7 @@ class NicerObsID():
 		f.close()
 
 		self.have_event_files()
+		self.set_basic_information()		
 		self.dump_setup_to_yamlfile()	
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0
@@ -447,9 +472,9 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 		fversion = os.popen('fversion').read().rstrip()		
 
-		if not self.flag_clevt_has_events:
-			print("No cleaned events.")
-			return 0
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
 
 		nibackgen3C50(
 			outdir=self.outdir,
@@ -487,9 +512,9 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 		fversion = os.popen('fversion').read().rstrip()		
 
-		if not self.flag_clevt_has_events:
-			print("No cleaned events.")
-			return 0
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
 
 		self.fit_avespec_pdf = fit_xspec(
 			phafile=self.totspec,
@@ -504,6 +529,16 @@ class NicerObsID():
 			parerrnum=str(self.param['xspec_parerrnum']).replace(' ',''))
 		print(self.fit_avespec_pdf)
 
+		fit_yaml = self.fit_avespec_pdf.replace(".pdf",".yaml")
+		if not os.path.exists(fit_yaml):
+			print("warning: %s does not exist." % fit_yaml)
+			return 0
+		fit_param = yaml.load(open(fit_yaml),Loader=yaml.FullLoader)
+		self.rate = fit_param['ratelist'][0][0]
+		self.rate_error = fit_param['ratelist'][0][1]
+		self.band_low = fit_param['ratebands'][0][0] 
+		self.band_high = fit_param['ratebands'][0][1] 		
+
 		self.dump_setup_to_yamlfile()
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0
@@ -512,9 +547,9 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
 
-		if not self.flag_clevt_has_events:
-			print("No cleaned events.")
-			return 0
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
 
 		plot_lcurve(
 			eventfile=self.clevt,
@@ -588,9 +623,9 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
 
-		if not self.flag_clevt_has_events:
-			print("No cleaned events.")
-			return 0
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
 
 		basename = os.path.splitext(os.path.basename(self.clevt))[0]
 		if self.param['barycorr_RA_deg'] == "None":
@@ -643,13 +678,15 @@ class NicerObsID():
 	def devide_to_block(self):
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
-		if not self.flag_clevt_has_events:
-			print("No cleaned events.")
-			return 0
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
 
 		self.set_nisegment_list()
 		for nisegment in self.nigsegment_list:
 			nisegment.devide_to_block()
+
+			self.total_number_of_block += nisegment.number_of_block
 
 		#self.dump_setup_to_yamlfile()
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
@@ -658,9 +695,9 @@ class NicerObsID():
 	def fit_of_block(self):
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
-		if not self.flag_clevt_has_events:
-			print("No cleaned events.")
-			return 0
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
 
 		self.set_nisegment_list()
 		for nisegment in self.nigsegment_list:
@@ -942,10 +979,10 @@ class NicerProcessLog():
 		self.csvfile = csvfile
 		self.htmlfile = os.path.splitext(self.csvfile)[0] + '.html'
 
-		self.columns = ['dir','spec','fit','lc','seg','mkdir','nicerl2','3c50','xspec','lcurve','bary','div2seg','fit2seg','div2block','fit2block']
+		self.columns = ['object','date_obs','exp(ks)','#evt','dir','spec','rate','fit','lc','seg','#block','mkdir','nicerl2','3c50','xspec','lcurve','bary','div2seg','fit2seg','div2block','fit2block']
 		self.dict_null = {}
 		for col in self.columns:
-			self.dict_null[col] = None
+			self.dict_null[col] = "Unproc"
 
 		if os.path.exists(self.csvfile):
 			print("...reading %s." % self.csvfile )
@@ -976,7 +1013,12 @@ class NicerProcessLog():
 		print(cmd);os.system(cmd)
 		cmd = 'sed -e "s/&gt;/>/g" tmp.html > tmp2.html' 
 		print(cmd);os.system(cmd)		
-		cmd = 'mv tmp2.html %s; rm -f tmp.html tmp2.html' % self.htmlfile
+		cmd = 'sed -e "s/<td>Done/<td bgcolor="#01FF70">Done/g" tmp2.html > tmp3.html' 
+		print(cmd);os.system(cmd)		
+		cmd = 'sed -e "s/<td>Error/<td bgcolor="#FF6666">Error/g" tmp3.html > tmp4.html' 
+		print(cmd);os.system(cmd)						
+		cmd = 'mv tmp4.html %s; rm -f tmp.html tmp?.html' % self.htmlfile
+#		cmd = 'mv tmp2.html %s; ' % self.htmlfile
 		print(cmd);os.system(cmd)		
 
 
@@ -1063,11 +1105,11 @@ class NicerManager():
 
 			try:
 				niobsid.make_directory()
-				self.proclog.df.at[niobsid.obsid,'mkdir'] = 'True'		
+				self.proclog.df.at[niobsid.obsid,'mkdir'] = 'Done'		
 				self.proclog.df.at[niobsid.obsid,'dir'] = '<a href="./%s">dir</a>' % (niobsid.outdir.replace(self.param['output_directory'],''))
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'dir'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'dir'] = 'Error'
 		
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
@@ -1080,6 +1122,10 @@ class NicerManager():
 			return 0
 		
 		self.proclog.df['nicerl2'] = self.proclog.df['nicerl2'].astype(str)
+		self.proclog.df['object'] = self.proclog.df['object'].astype(str)
+		self.proclog.df['date_obs'] = self.proclog.df['date_obs'].astype(str)
+		self.proclog.df['exp(ks)'] = self.proclog.df['exp(ks)'].astype(str)
+		self.proclog.df['#evt'] = self.proclog.df['#evt'].astype(str)
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'nicerl2'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
@@ -1088,10 +1134,15 @@ class NicerManager():
 
 			try:
 				niobsid.run_nicerl2()
-				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'Done'
+
+				self.proclog.df.at[niobsid.obsid,'object'] = niobsid.object
+				self.proclog.df.at[niobsid.obsid,'date_obs'] = niobsid.date_obs
+				self.proclog.df.at[niobsid.obsid,'exp(ks)'] = '%.2f' % (float(niobsid.exposure)*1e-3)
+				self.proclog.df.at[niobsid.obsid,'#evt'] = '%.1e' % (float(niobsid.num_of_clevt))				
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'False'				
+				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'Error'				
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 		print("*[NicerManager] %s DONE" % (sys._getframe().f_code.co_name))
@@ -1110,14 +1161,19 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'3c50'] = 'Skip'	
+				self.proclog.df.at[niobsid.obsid,'spec'] = 'Skip'
+				continue 
+
 			try:
 				niobsid.run_nibackgen3C50()
-				self.proclog.df.at[niobsid.obsid,'3c50'] = 'True'	
+				self.proclog.df.at[niobsid.obsid,'3c50'] = 'Done'	
 				self.proclog.df.at[niobsid.obsid,'spec'] = '<a href="./%s">pdf</a>' % (niobsid.spec_pdf.replace(self.param['output_directory'],''))
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'3c50'] = 'False'		
-				self.proclog.df.at[niobsid.obsid,'spec'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'3c50'] = 'Error'		
+				self.proclog.df.at[niobsid.obsid,'spec'] = 'Error'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 		print("*[NicerManager] %s DONE" % (sys._getframe().f_code.co_name))
@@ -1130,20 +1186,34 @@ class NicerManager():
 
 		self.proclog.df['xspec'] = self.proclog.df['xspec'].astype(str)
 		self.proclog.df['fit'] = self.proclog.df['fit'].astype(str)
+		self.proclog.df['rate'] = self.proclog.df['rate'].astype(str)
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'fit'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'xspec'] = 'Skip'	
+				self.proclog.df.at[niobsid.obsid,'fit'] = 'Skip'
+				self.proclog.df.at[niobsid.obsid,'rate'] = 'Skip'
+				continue 
+
 			try:
 				niobsid.fit_avespec()
-				self.proclog.df.at[niobsid.obsid,'xspec'] = 'True'	
+				self.proclog.df.at[niobsid.obsid,'xspec'] = 'Done'	
 				self.proclog.df.at[niobsid.obsid,'fit'] = '<a href="./%s">pdf</a>' % (niobsid.fit_avespec_pdf.replace(self.param['output_directory'],''))
+				if float(niobsid.rate) < 1.0:				
+					self.proclog.df.at[niobsid.obsid,'rate'] = '%.3f+/-%.3f' % (niobsid.rate,niobsid.rate_error)
+				elif float(niobsid.rate) > 1000.0:	
+					self.proclog.df.at[niobsid.obsid,'rate'] = '%.1e+/-%.1e' % (niobsid.rate,niobsid.rate_error)
+				else:					
+					self.proclog.df.at[niobsid.obsid,'rate'] = '%.1f+/-%.1f' % (niobsid.rate,niobsid.rate_error)					
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'xspec'] = 'False'		
-				self.proclog.df.at[niobsid.obsid,'fit'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'xspec'] = 'Error'		
+				self.proclog.df.at[niobsid.obsid,'fit'] = 'Error'
+				self.proclog.df['rate'] = 'Error'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()
 
@@ -1161,14 +1231,19 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'Skip'	
+				self.proclog.df.at[niobsid.obsid,'lc'] = 'Skip'
+				continue 
+
 			try:
 				niobsid.plot_lightcurve()
-				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'Done'
 				self.proclog.df.at[niobsid.obsid,'lc'] = '<a href="./%s">pdf</a>' % (niobsid.lc_pdf.replace(self.param['output_directory'],''))				
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'False'	
-				self.proclog.df.at[niobsid.obsid,'lc'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'Error'	
+				self.proclog.df.at[niobsid.obsid,'lc'] = 'Error'
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()			
 
@@ -1185,12 +1260,16 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'bary'] = 'Skip'	
+				continue 
+
 			try:
 				niobsid.run_barycorr()
-				self.proclog.df.at[niobsid.obsid,'bary'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'bary'] = 'Done'
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'bary'] = 'False'	
+				self.proclog.df.at[niobsid.obsid,'bary'] = 'Error'	
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
@@ -1209,14 +1288,19 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'Skip'	
+				self.proclog.df.at[niobsid.obsid,'seg'] = 'Skip'
+				continue 
+
 			try:
 				niobsid.devide_to_segment()
-				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'Done'
 				self.proclog.df.at[niobsid.obsid,'seg'] = '%d (<a href="./%s">dir</a>)' % (niobsid.number_of_segment, niobsid.dir_segment_main.replace(self.param['output_directory'],''))
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'False'	
-				self.proclog.df.at[niobsid.obsid,'seg'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'Error'	
+				self.proclog.df.at[niobsid.obsid,'seg'] = 'Error'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
@@ -1234,12 +1318,16 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'Skip'	
+				continue 
+
 			try:
 				niobsid.fit_of_segment()
-				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'Done'
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'False'	
+				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'Error'	
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
@@ -1257,16 +1345,18 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
-			#niobsid.devide_to_block()
-			#exit()
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Skip'	
+				continue 
+
 			try:
 				niobsid.devide_to_block()
-				self.proclog.df.at[niobsid.obsid,'div2block'] = 'True'
+				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Done'
 				#self.proclog.df.at[niobsid.obsid,'seg'] = '%d (<a href="./%s">dir</a>)' % (niobsid.number_of_segment, niobsid.dir_segment_main.replace(self.param['output_directory'],''))
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)
-				self.proclog.df.at[niobsid.obsid,'div2block'] = 'False'	
-				#self.proclog.df.at[niobsid.obsid,'seg'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Error'	
+				#self.proclog.df.at[niobsid.obsid,'seg'] = 'Error'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
@@ -1278,6 +1368,7 @@ class NicerManager():
 			print("skip ... since flag_devide_to_block is %s" % self.param['flag_fit_of_block']) 
 			return 0		
 
+		self.proclog.df['#block'] = self.proclog.df['#block'].astype(str)
 		self.proclog.df['fit2block'] = self.proclog.df['fit2block'].astype(str)
 		for niobsid in self.nicerobs_lst:
 			flag = str(self.proclog.df.at[niobsid.obsid,'fit2block'])
@@ -1285,14 +1376,20 @@ class NicerManager():
 				print("...skip, already processed.")
 				continue
 
+			if not niobsid.flag_clevt_has_events:
+				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Skip'	
+				self.proclog.df.at[niobsid.obsid,'#block'] =  'Skip'
+
+				continue 
+
 			try:
 				niobsid.fit_of_block()
-				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'True'
-				#self.proclog.df.at[niobsid.obsid,'seg'] = '%d (<a href="./%s">dir</a>)' % (niobsid.number_of_segment, niobsid.dir_segment_main.replace(self.param['output_directory'],''))
+				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Done'
+				self.proclog.df.at[niobsid.obsid,'#block'] =  '%d' % (niobsid.total_number_of_block)
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)
-				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'False'	
-				#self.proclog.df.at[niobsid.obsid,'seg'] = 'ERROR'
+				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Error'	
+				self.proclog.df.at[niobsid.obsid,'#block'] =  'Error'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
