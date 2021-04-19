@@ -366,14 +366,22 @@ class NicerObsID():
 			self.nigsegment_list = []
 			for i in range(self.number_of_segment):
 				segment_num = i + 1 
-				segment_dir = '%s/seg%003d' % (self.dir_segment_main,segment_num)			
-				print("----- segment_dir = %s" % segment_dir)			
-				segment_basename = 'ni%s_0mpu7_seg%03d' % (self.obsid,segment_num)
+				if self.param['flag_segment_time_bary']:
+					segment_dir = '%s/seg%003db' % (self.dir_segment_main,segment_num)			
+					print("----- segment_dir = %s" % segment_dir)			
+					segment_basename = 'ni%s_0mpu7_seg%03db' % (self.obsid,segment_num)
+				else:
+					segment_dir = '%s/seg%003db' % (self.dir_segment_main,segment_num)			
+					print("----- segment_dir = %s" % segment_dir)			
+					segment_basename = 'ni%s_0mpu7_seg%03db' % (self.obsid,segment_num)
 				print(segment_num)			
 				print(segment_dir)
 				print(segment_basename)
 
-				gtifile = '%s/ni%s_0mpu7_seg%03d.gti' % (segment_dir,self.obsid,segment_num)
+				if self.param['flag_segment_time_bary']:
+					gtifile = '%s/ni%s_0mpu7_seg%03db.gti' % (segment_dir,self.obsid,segment_num)
+				else:
+					gtifile = '%s/ni%s_0mpu7_seg%03d.gti' % (segment_dir,self.obsid,segment_num)				
 				hdu_gti = fits.open(gtifile)
 				tstart  = hdu_gti['GTI'].data[0]['START']
 				tstop  = hdu_gti['GTI'].data[0]['STOP']
@@ -579,8 +587,10 @@ class NicerObsID():
 		#	return 0
 
 		if self.param['barycorr_RA_deg'] == "None":
+			hdu = fits.open(self.clevt)
 			self.param['barycorr_RA_deg'] = float(hdu['EVENTS'].header['RA_OBJ'])
 		if self.param['barycorr_DEC_deg'] == "None":
+			hdu = fits.open(self.clevt)			
 			self.param['barycorr_DEC_deg'] = float(hdu['EVENTS'].header['DEC_OBJ'])		
 
 		basename = os.path.splitext(os.path.basename(self.clevt))[0]
@@ -917,7 +927,10 @@ class NicerInterval():
 		cmd = 'rm -rf %s; mkdir -p %s;' % (self.block_dir,self.block_dir)
 		print(cmd);os.system(cmd)
 
-		self.lcfile = '%s/lc/ni%s_0mpu7_seg%03d_cl_ene.flc' % (self.outdir,self.obsid,self.num)
+		if self.param['flag_segment_time_bary']:
+			self.lcfile = '%s/lc/ni%s_0mpu7_seg%03db_cl_bary_ene.flc' % (self.outdir,self.obsid,self.num)
+		else:
+			self.lcfile = '%s/lc/ni%s_0mpu7_seg%03d_cl_ene.flc' % (self.outdir,self.obsid,self.num)		
 		if not os.path.exists(self.lcfile):
 			print("file does not exist: %s" % self.lcfile)
 			return -1
@@ -1304,6 +1317,8 @@ class NicerManager():
 				self.proclog.df.at[niobsid.obsid,'bary'] = 'Skip'	
 				continue 
 
+			niobsid.run_barycorr()
+			exit()
 			try:
 				niobsid.run_barycorr()
 				self.proclog.df.at[niobsid.obsid,'bary'] = 'Done'
@@ -1392,11 +1407,11 @@ class NicerManager():
 			try:
 				niobsid.devide_to_block()
 				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Done'
-				#self.proclog.df.at[niobsid.obsid,'seg'] = '%d (<a href="./%s">dir</a>)' % (niobsid.number_of_segment, niobsid.dir_segment_main.replace(self.param['output_directory'],''))
+				self.proclog.df.at[niobsid.obsid,'#block'] =  '%d' % (niobsid.total_number_of_block)
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)
 				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Error'	
-				#self.proclog.df.at[niobsid.obsid,'seg'] = 'Error'
+				self.proclog.df.at[niobsid.obsid,'#block'] =  'Error'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
@@ -1425,11 +1440,9 @@ class NicerManager():
 			try:
 				niobsid.fit_of_block()
 				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Done'
-				self.proclog.df.at[niobsid.obsid,'#block'] =  '%d' % (niobsid.total_number_of_block)
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)
 				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Error'	
-				self.proclog.df.at[niobsid.obsid,'#block'] =  'Error'
 
 		self.proclog.write_to_csvfile()
 		self.proclog.write_to_htmlfile()	
