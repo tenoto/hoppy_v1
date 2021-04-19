@@ -246,14 +246,17 @@ def plot_lcurve(eventfile,outdir,lc_energy_bands,lc_time_bin_sec):
 
 	print("-----[func:%s] Done" % sys._getframe().f_code.co_name)
 
-def barycen(evtfile,outfile,outdir,orbfile,ra,dec,overwrite=False):
+def barycen(evtfile,outfile,outdir,orbfile,ra,dec,flag_overwrite=False):
 	print("-----[func:%s]" % sys._getframe().f_code.co_name)
 
-	if overwrite:
+	if flag_overwrite and os.path.exists(outdir):
 		cmd  = 'rm -rf %s;\n' % outdir
 		cmd += 'mkdir -p %s\n' % outdir
-	else:
+	elif not os.path.exists(outdir):
 		cmd = 'mkdir -p %s\n' % outdir
+	else:
+		print("%s exists..." % outdir)
+		cmd = ""
 	print(cmd);os.system(cmd)
 
 	baryevt = '%s/%s' % (outdir,outfile)
@@ -321,6 +324,9 @@ class NicerObsID():
 		self.orbitfile = "%s/auxil/ni%s.orb.gz" % (self.outdir,self.obsid)
 		self.totspec = '%s/spec/ni%s_3c50_ave_tot.pi' % (self.outdir,self.obsid)
 		self.bkgspec = '%s/spec/ni%s_3c50_ave_bkg.pi' % (self.outdir,self.obsid)		
+
+		self.clevt_bary = '%s/bary/ni%s_0mpu7_cl_bary.evt' % (self.outdir,self.obsid)		
+		self.ufaevt_bary = '%s/bary/ni%s_0mpu7_ufa_bary.evt' % (self.outdir,self.obsid)		
 
 		self.total_number_of_block = 0
 
@@ -564,6 +570,41 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0		
 
+	def run_barycorr(self):
+		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
+
+
+		#if not self.flag_clevt_has_events:
+		#	print("No cleaned events.")
+		#	return 0
+
+		if self.param['barycorr_RA_deg'] == "None":
+			self.param['barycorr_RA_deg'] = float(hdu['EVENTS'].header['RA_OBJ'])
+		if self.param['barycorr_DEC_deg'] == "None":
+			self.param['barycorr_DEC_deg'] = float(hdu['EVENTS'].header['DEC_OBJ'])		
+
+		basename = os.path.splitext(os.path.basename(self.clevt))[0]
+		barycen(
+			evtfile=self.clevt,
+			outfile=basename+'_bary.evt',
+			outdir=self.outdir+'/bary',
+			orbfile=self.orbitfile,
+			ra=self.param['barycorr_RA_deg'],dec=self.param['barycorr_DEC_deg'],
+			flag_overwrite=True)
+
+		basename = os.path.splitext(os.path.basename(self.ufaevt))[0]
+		barycen(
+			evtfile=self.ufaevt,
+			outfile=basename+'_bary.evt',
+			outdir=self.outdir+'/bary',
+			orbfile=self.orbitfile,
+			ra=self.param['barycorr_RA_deg'],dec=self.param['barycorr_DEC_deg'],
+			flag_overwrite=False)
+
+		self.dump_setup_to_yamlfile()
+		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
+		return 0	
+
 	def devide_to_segment(self):
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
 
@@ -578,7 +619,10 @@ class NicerObsID():
 		print(cmd);os.system(cmd)
 
 		# re-arrange GTIs
-		cmd = 'rm -f tmp_gti.txt; group_gti.py %s tmp_gti.txt --gti_separation_threshold %.2f' % (self.clevt,self.param['gti_separation_threshold'])
+		if not bool(self.param['flag_segment_time_bary']):
+			cmd = 'rm -f tmp_gti.txt; group_gti.py %s tmp_gti.txt --gti_separation_threshold %.2f' % (self.clevt,self.param['gti_separation_threshold'])
+		else:
+			cmd = 'rm -f tmp_gti.txt; group_gti.py %s tmp_gti.txt --gti_separation_threshold %.2f' % (self.clevt_bary,self.param['gti_separation_threshold'])			
 		print(cmd);os.system(cmd)
 
 		# convert text file GTI format to fits file.
@@ -593,8 +637,12 @@ class NicerObsID():
 		self.nigsegment_list = []
 		for i in range(self.number_of_segment):
 			segment_num = i + 1 
-			segment_dir = '%s/seg%03d' % (self.dir_segment_main,segment_num)
-			segment_basename = 'ni%s_0mpu7_seg%03d' % (self.obsid,segment_num)
+			if self.param['flag_segment_time_bary']:
+				segment_dir = '%s/seg%03db' % (self.dir_segment_main,segment_num)
+				segment_basename = 'ni%s_0mpu7_seg%03db' % (self.obsid,segment_num)
+			else:
+				segment_dir = '%s/seg%03d' % (self.dir_segment_main,segment_num)				
+				segment_basename = 'ni%s_0mpu7_seg%03d' % (self.obsid,segment_num)				
 			segment_tstart = hdu['GTI'].data[i][0]
 			segment_tstop = hdu['GTI'].data[i][1]
 			print(segment_tstart,segment_tstop)
@@ -619,30 +667,7 @@ class NicerObsID():
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 		return 0
 
-	def run_barycorr(self):
-		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
-
-
-		#if not self.flag_clevt_has_events:
-		#	print("No cleaned events.")
-		#	return 0
-
-		basename = os.path.splitext(os.path.basename(self.clevt))[0]
-		if self.param['barycorr_RA_deg'] == "None":
-			self.param['barycorr_RA_deg'] = float(hdu['EVENTS'].header['RA_OBJ'])
-		if self.param['barycorr_DEC_deg'] == "None":
-			self.param['barycorr_DEC_deg'] = float(hdu['EVENTS'].header['DEC_OBJ'])		
-		barycen(
-			evtfile=self.clevt,
-			outfile=basename+'_bary.evt',
-			outdir=self.outdir+'/bary',
-			orbfile=self.orbitfile,
-			ra=self.param['barycorr_RA_deg'],dec=self.param['barycorr_DEC_deg'],
-			overwrite=True)
-
-		self.dump_setup_to_yamlfile()
-		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
-		return 0		
+	
 
 	def fit_of_segment(self):
 		print("**[NicerObsID %s] %s" % (self.obsid,sys._getframe().f_code.co_name))
@@ -750,8 +775,12 @@ class NicerInterval():
 
 		self.gti_txt = '%s/%s_gti.txt' % (self.outdir,self.basename)
 		self.gti = '%s/%s.gti' % (self.outdir,self.basename)
-		self.clevt = '%s/%s_cl.evt' % (self.outdir,self.basename)
-		self.ufaevt = '%s/%s_ufa.evt' % (self.outdir,self.basename)
+		if self.param['flag_segment_time_bary']:
+			self.clevt = '%s/%s_cl_bary.evt' % (self.outdir,self.basename)
+			self.ufaevt = '%s/%s_ufa_bary.evt' % (self.outdir,self.basename)
+		else:
+			self.clevt = '%s/%s_cl.evt' % (self.outdir,self.basename)
+			self.ufaevt = '%s/%s_ufa.evt' % (self.outdir,self.basename)
 
 		self.totspec_name = '%s_3c50_tot' % (self.basename)
 		self.bkgspec_name = '%s_3c50_bkg' % (self.basename)
@@ -768,6 +797,7 @@ class NicerInterval():
 		elif dtype == "block":
 			self.title = 'Block (ObsID=%s Seg=%003d Block=%03d) %.2f-%.2f (%.1f s)' % (self.obsid,self.segment_num,self.num,self.tstart,self.tstop,self.duration)
 
+		self.number_of_block = 0
 		self.block_dir = None
 
 	def make_directory(self):
@@ -789,13 +819,19 @@ class NicerInterval():
 		print(cmd);os.system(cmd)
 
 		cmd  = 'xselect_gtifilter.py '
-		cmd += '-i %s ' % self.parent_nicerobsid.clevt 
+		if bool(self.param['flag_segment_time_bary']):
+			cmd += '-i %s ' % self.parent_nicerobsid.clevt_bary
+		else:
+			cmd += '-i %s ' % self.parent_nicerobsid.clevt 
 		cmd += '-g %s ' % self.gti 
 		cmd += '-o %s;\n' % self.clevt
 		print(cmd);os.system(cmd)
 
 		cmd  = 'xselect_gtifilter.py '
-		cmd += '-i %s ' % self.parent_nicerobsid.ufaevt 
+		if bool(self.param['flag_segment_time_bary']):
+			cmd += '-i %s ' % self.parent_nicerobsid.ufaevt_bary 
+		else:
+			cmd += '-i %s ' % self.parent_nicerobsid.ufaevt 			
 		cmd += '-g %s ' % self.gti 
 		cmd += '-o %s;\n' % self.ufaevt
 		print(cmd);os.system(cmd)
@@ -948,8 +984,12 @@ class NicerInterval():
 		for i in range(self.number_of_block):
 			block_num = i + 1 
 
-			block_dir = '%s/block%03d' % (self.block_dir,block_num)
-			block_basename = 'ni%s_0mpu7_seg%03d_block%03d' % (self.obsid,self.num,block_num)
+			if bool(self.param['flag_segment_time_bary']):
+				block_dir = '%s/block%03db' % (self.block_dir,block_num)
+				block_basename = 'ni%s_0mpu7_seg%03db_block%03db' % (self.obsid,self.num,block_num)
+			else:
+				block_dir = '%s/block%03d' % (self.block_dir,block_num)
+				block_basename = 'ni%s_0mpu7_seg%03d_block%03d' % (self.obsid,self.num,block_num)
 			block_tstart = self.edges_met[i]
 			block_tstop = self.edges_met[i+1]
 			print(block_tstart,block_tstop)
