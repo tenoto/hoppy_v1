@@ -445,8 +445,11 @@ class NicerObsID():
 		print("-----------")			
 		cmd = 'rm -f %s;\n' % self.setup_yamlfile
 		print(cmd);os.system(cmd)
-		with open(self.setup_yamlfile, "a") as wf:
-			yaml.dump(output_dict, wf, default_flow_style=False)		
+		#with open(self.setup_yamlfile, "a") as wf:
+		#	yaml.dump(output_dict, wf, default_flow_style=False)		
+		f = open(self.setup_yamlfile, "a")
+		f.write(yaml.dump(output_dict,default_flow_style=False))
+		f.close()
 		print("**[NicerObsID %s] %s DONE" % (self.obsid,sys._getframe().f_code.co_name))
 
 	def run_nicerl2(self):
@@ -1317,8 +1320,6 @@ class NicerManager():
 				self.proclog.df.at[niobsid.obsid,'bary'] = 'Skip'	
 				continue 
 
-			niobsid.run_barycorr()
-			exit()
 			try:
 				niobsid.run_barycorr()
 				self.proclog.df.at[niobsid.obsid,'bary'] = 'Done'
