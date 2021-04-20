@@ -1156,7 +1156,7 @@ class NicerManager():
 		for niobsid in self.nicerobs_lst:			
 			flag = str(self.proclog.df.at[niobsid.obsid,'mkdir'])
 			if self.param['flag_process_overwrite'] == False and flag == 'True':
-				print("...skip, already processed.")
+				print("...skip, already processed.")				
 				continue
 
 			try:
@@ -1165,10 +1165,9 @@ class NicerManager():
 				self.proclog.df.at[niobsid.obsid,'dir'] = '<a href="./%s">dir</a>' % (niobsid.outdir.replace(self.param['output_directory'],''))
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
-				self.proclog.df.at[niobsid.obsid,'dir'] = 'Error'
-		
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()
+				self.proclog.df.at[niobsid.obsid,'dir'] = 'Error'		
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()
 		print("*[NicerManager] %s DONE" % (sys._getframe().f_code.co_name))
 
 	def run_nicerl2(self):
@@ -1191,7 +1190,6 @@ class NicerManager():
 			try:
 				niobsid.run_nicerl2()
 				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'Done'
-
 				self.proclog.df.at[niobsid.obsid,'object'] = niobsid.object
 				self.proclog.df.at[niobsid.obsid,'date_obs'] = niobsid.date_obs
 				self.proclog.df.at[niobsid.obsid,'exp(ks)'] = '%.2f' % (float(niobsid.exposure)*1e-3)
@@ -1199,8 +1197,8 @@ class NicerManager():
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
 				self.proclog.df.at[niobsid.obsid,'nicerl2'] = 'Error'				
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()
 		print("*[NicerManager] %s DONE" % (sys._getframe().f_code.co_name))
 
 	def run_nibackgen3C50(self):
@@ -1220,6 +1218,8 @@ class NicerManager():
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'3c50'] = 'Skip'	
 				self.proclog.df.at[niobsid.obsid,'spec'] = 'Skip'
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1230,8 +1230,8 @@ class NicerManager():
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
 				self.proclog.df.at[niobsid.obsid,'3c50'] = 'Error'		
 				self.proclog.df.at[niobsid.obsid,'spec'] = 'Error'
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()
 		print("*[NicerManager] %s DONE" % (sys._getframe().f_code.co_name))
 
 	def fit_avespec(self):
@@ -1253,6 +1253,8 @@ class NicerManager():
 				self.proclog.df.at[niobsid.obsid,'xspec'] = 'Skip'	
 				self.proclog.df.at[niobsid.obsid,'fit'] = 'Skip'
 				self.proclog.df.at[niobsid.obsid,'rate'] = 'Skip'
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1270,8 +1272,8 @@ class NicerManager():
 				self.proclog.df.at[niobsid.obsid,'xspec'] = 'Error'		
 				self.proclog.df.at[niobsid.obsid,'fit'] = 'Error'
 				self.proclog.df['rate'] = 'Error'
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()
 
 	def plot_lightcurve(self):
 		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
@@ -1290,6 +1292,8 @@ class NicerManager():
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'Skip'	
 				self.proclog.df.at[niobsid.obsid,'lc'] = 'Skip'
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1300,8 +1304,8 @@ class NicerManager():
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
 				self.proclog.df.at[niobsid.obsid,'lcurve'] = 'Error'	
 				self.proclog.df.at[niobsid.obsid,'lc'] = 'Error'
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()			
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()			
 
 	def run_barycorr(self):
 		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
@@ -1318,6 +1322,8 @@ class NicerManager():
 
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'bary'] = 'Skip'	
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1326,9 +1332,8 @@ class NicerManager():
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
 				self.proclog.df.at[niobsid.obsid,'bary'] = 'Error'	
-
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()	
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()	
 
 	def devide_to_segment(self):
 		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
@@ -1347,6 +1352,8 @@ class NicerManager():
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'Skip'	
 				self.proclog.df.at[niobsid.obsid,'seg'] = 'Skip'
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1357,9 +1364,8 @@ class NicerManager():
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
 				self.proclog.df.at[niobsid.obsid,'div2seg'] = 'Error'	
 				self.proclog.df.at[niobsid.obsid,'seg'] = 'Error'
-
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()	
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()	
 
 	def fit_of_segment(self):
 		print("\n[NicerManager] %s" % sys._getframe().f_code.co_name)
@@ -1376,6 +1382,8 @@ class NicerManager():
 
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'Skip'	
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1384,9 +1392,8 @@ class NicerManager():
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)				
 				self.proclog.df.at[niobsid.obsid,'fit2seg'] = 'Error'	
-
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()	
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()	
 
 	def devide_to_block(self):
 		print("-[NicerManager] %s" % sys._getframe().f_code.co_name)
@@ -1403,6 +1410,8 @@ class NicerManager():
 
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Skip'	
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()				
 				continue 
 
 			try:
@@ -1413,9 +1422,8 @@ class NicerManager():
 				print("Exception: %s" % sys._getframe().f_code.co_name)
 				self.proclog.df.at[niobsid.obsid,'div2block'] = 'Error'	
 				self.proclog.df.at[niobsid.obsid,'#block'] =  'Error'
-
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()	
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()	
 
 
 	def fit_of_block(self):
@@ -1435,7 +1443,8 @@ class NicerManager():
 			if not niobsid.flag_clevt_has_events:
 				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Skip'	
 				self.proclog.df.at[niobsid.obsid,'#block'] =  'Skip'
-
+				self.proclog.write_to_csvfile()
+				self.proclog.write_to_htmlfile()
 				continue 
 
 			try:
@@ -1444,7 +1453,6 @@ class NicerManager():
 			except:
 				print("Exception: %s" % sys._getframe().f_code.co_name)
 				self.proclog.df.at[niobsid.obsid,'fit2block'] = 'Error'	
-
-		self.proclog.write_to_csvfile()
-		self.proclog.write_to_htmlfile()	
+			self.proclog.write_to_csvfile()
+			self.proclog.write_to_htmlfile()	
 
