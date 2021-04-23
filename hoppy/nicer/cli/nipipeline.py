@@ -43,6 +43,7 @@ def main(args=None):
 	niman.fit_of_segment()
 	niman.devide_to_block()
 	niman.fit_of_block()
+	niman.extract_segment_table()
 
 
 if __name__=="__main__":

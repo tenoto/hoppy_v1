@@ -15,6 +15,8 @@ from astropy.io import fits
 from astropy.time import Time
 from astropy.stats import bayesian_blocks
 
+# ulimit -n 4096    
+
 def nibackgen3C50(outdir,basename,totspec_name,bkgspec_name,
 		bkgidxdir,bkglibdir,gainepoch,
 		mode='obsid',obsid=None,clfile=None,ufafile=None,
@@ -1060,7 +1062,10 @@ class NicerProcessLog():
 
 	def write_to_csvfile(self):
 		print("*[NicerProcessLog] %s" % (sys._getframe().f_code.co_name))
-		self.df.to_csv(self.csvfile)		
+		with open(self.csvfile, 'w') as f:
+			self.df.to_csv(f)
+		#https://stackoverflow.com/questions/17530542/how-to-add-pandas-data-to-an-existing-csv-file
+		#self.df.to_csv(self.csvfile)		
 
 	def write_to_htmlfile(self):
 		print("*[NicerProcessLog] %s" % (sys._getframe().f_code.co_name))
@@ -1456,3 +1461,10 @@ class NicerManager():
 			self.proclog.write_to_csvfile()
 			self.proclog.write_to_htmlfile()	
 
+	def extract_segment_table(self):
+		print("-[NicerManager] %s" % sys._getframe().f_code.co_name)
+		if not self.param['flag_extract_segment_table']:
+			print("skip ... since flag_devide_to_block is %s" % self.param['flag_extract_segment_table']) 
+			return 0			
+
+		
