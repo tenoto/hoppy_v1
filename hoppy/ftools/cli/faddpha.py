@@ -48,6 +48,7 @@ def faddpha(fname_inlst,fname_outpha,addtype,chatter):
 				f.write("'tmp_%s' * %.6f" % (os.path.basename(inpha_lst[i]), exposure_list[i]/sum_of_exposure))
 	f.close()	
 
+	print(fname_expr)
 	if addtype == 'C':
 		cmd  = 'mathpha <<EOF\n'
 		cmd += '@%s\n' % fname_expr
@@ -62,7 +63,8 @@ def faddpha(fname_inlst,fname_outpha,addtype,chatter):
 		cmd  = 'mathpha '
 		cmd += 'expr=@%s ' % fname_expr
 		cmd += 'units=R outfil="%s" ' % fname_outpha
-		cmd += 'exposure=%.3f ' % ave_of_exposure
+		cmd += 'exposure=NULL '
+		#cmd += 'exposure=%.3f ' % ave_of_exposure
 		cmd += 'errmeth=gaussian properr=yes ncomments=0 areascal=NULL clobber=yes'
 		print(cmd);os.system(cmd)
 
