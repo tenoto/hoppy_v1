@@ -118,23 +118,46 @@ class XspecPha():
 
 		self.hdu_pha = fits.open(self.phafile)
 		self.header = self.hdu_pha['SPECTRUM'].header
-		self.OBSID = self.header['OBS_ID']		
-		self.DATEOBS = self.header['DATE-OBS']
-		self.DATEEND = self.header['DATE-END']		
+		try:
+			self.OBSID = self.header['OBS_ID']		
+		except:
+			self.OBSID = None
+		try:
+			self.DATEOBS = self.header['DATE-OBS']
+		except:			
+			self.DATEOBS = None
+		try:
+			self.DATEEND = self.header['DATE-END']		
+		except:
+			self.DATEEND = None
 		self.EXPOSURE = self.header['EXPOSURE']
-		self.OBJECT = self.header['OBJECT']
+		try:
+			self.OBJECT = self.header['OBJECT']
+		except:
+			self.OBJECT = None
 		if self.rmffile == None:
 			self.rmffile = self.header['RESPFILE']
 		if self.arffile == None:
 			self.arffile = self.header['ANCRFILE']
 		self.TELESCOP = self.header['TELESCOP']
-		self.INSTRUME = self.header['INSTRUME']		
-		self.MJDOBS = self.header['MJD-OBS']
-		self.TSTART = self.header['TSTART']
-		self.TSTOP = self.header['TSTOP']	
+		self.INSTRUME = self.header['INSTRUME']
+		try:		
+			self.MJDOBS = self.header['MJD-OBS']
+		except:
+			self.MJDOBS = None
+		try:
+			self.TSTART = self.header['TSTART']
+			self.TSTOP = self.header['TSTOP']	
+		except:
+			self.TSTART = None
+			self.TSTOP = None
 
-		self.MJD_DATEOBS = float(asttime.Time(self.DATEOBS,format='isot', scale='utc').mjd)
-		self.MJD_DATEEND = float(asttime.Time(self.DATEEND,format='isot', scale='utc').mjd)
+		try:
+			self.MJD_DATEOBS = float(asttime.Time(self.DATEOBS,format='isot', scale='utc').mjd)
+			self.MJD_DATEEND = float(asttime.Time(self.DATEEND,format='isot', scale='utc').mjd)
+		except:
+			self.MJD_DATEOBS = None
+			self.MJD_DATEEND = None
 
 	def show_property(self):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
@@ -545,7 +568,7 @@ class CSVtoXSPEC():
 			sys.stderr.write('file %s does not exist.' % self.yamlfile)
 			exit()			
 
-		self.param = yaml.load(open(self.yamlfile))
+		self.param = yaml.load(open(self.yamlfile),Loader=yaml.FullLoader)
 
 	def make_csv2xspec(self,outcsvfile):
 		df = pd.read_csv(self.filelist,names=('data_id','phafile','backgrnd','rmffile','arffile'))
@@ -589,7 +612,7 @@ class MonitoringManager():
 
 		self.df = pd.read_csv(self.csvfile)
 		self.df = self.df.drop(columns='Unnamed: 0')
-		self.param = yaml.load(open(self.yamlfile))
+		self.param = yaml.load(open(self.yamlfile),Loader=yaml.FullLoader)
 
 		self.outcsvfile = '%s/%s' % (
 			self.param['outdir'],
@@ -615,10 +638,11 @@ class MonitoringManager():
 				ratebands=self.param['ratebands'],
 				fluxbands=self.param['fluxbands'],
 				parerrnum=self.param['parerrnum'])
-			try:				
-				xspec_pha.run()
-			except:
-				print("can not fit ... skip %s" % outdir)
+			xspec_pha.run()			
+			#try:				
+			#	xspec_pha.run()
+			#except:
+			#	print("can not fit ... skip %s" % outdir)
 
 	def collect_fitresults(self):	
 		add_column_names = [
@@ -664,7 +688,7 @@ class MonitoringManager():
 		for index, dataset in self.df.iterrows():
 			basename = os.path.splitext(os.path.basename(dataset['phafile']))[0]
 			fitresult_yamlfile = glob.glob('%s/%s/%s*.yaml' % (self.param['outdir'],dataset['data_id'],basename))[0]
-			fitresult = yaml.load(open(fitresult_yamlfile))
+			fitresult = yaml.load(open(fitresult_yamlfile),Loader=yaml.FullLoader)
 			print("\n")
 			print(fitresult)
 

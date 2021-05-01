@@ -45,6 +45,5 @@ def main(args=None):
 	niman.fit_of_block()
 	niman.extract_segment_table()
 
-
 if __name__=="__main__":
 	main()
