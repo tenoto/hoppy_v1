@@ -326,6 +326,7 @@ class XspecPha():
 		cmd += 'show pa\n'		
 		cmd += 'show fit\n'	
 		cmd += 'log none\n'
+		cmd += 'setplot add\n'
 		cmd += 'iplot ld del\n'
 		if os.path.exists(self.fpco_fit):
 			cmd += '@%s\n' % self.fpco_fit
