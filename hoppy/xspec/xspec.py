@@ -37,7 +37,7 @@ class XspecPha():
 		plotymineeuf=1e-5,plotymaxeeuf=10,ploty2min=-10.0,ploty2max=10.0,
 		ratebands=[[0.4,6.0],[1.0,10.0]],
 		fluxbands=[[0.4,6.0],[1.0,10.0]],
-		parerrnum=[1,2,5]):
+		parerrnum=[1,2,5],freeze_params=None):
 		print("\n[XspecPha] %s" % (sys._getframe().f_code.co_name))
 
 		self.phafile = phafile
@@ -59,6 +59,7 @@ class XspecPha():
 		self.ploty2min = ploty2min
 		self.ploty2max = ploty2max
 
+		self.freeze_params = freeze_params
 		self.flag_fit_complete = False
 
 		if type(ratebands) == list:
@@ -370,7 +371,7 @@ class XspecPha():
 		cmd = 'ps2pdf.py %s' % self.fps_fit_eeuf
 		print(cmd);os.system(cmd)		
 
-	def get_flux(self,fitxcm,emin,emax):
+	def get_flux(self,fitxcm,emin,emax,freeze_params=None):
 		sys.stdout.write('----- %s -----\n' % sys._getframe().f_code.co_name)
 
 		tmp_log = '%s/tmp_flux_%sto%skeV.log' % (self.outdir,
@@ -381,6 +382,9 @@ class XspecPha():
 		cmd  = 'xspec<<EOF\n'
 		cmd += '@%s\n' % self.fxcm_fit
 		cmd += 'query yes\n'		
+		if freeze_params != None:
+			for param_num in freeze_params:
+				cmd += 'freeze %d\n' % param_num
 		cmd += 'fit\n'
 		cmd += 'log %s\n' % tmp_log
 		cmd += 'flux %.3f %.3f err 300,68.3\n' % (emin,emax)
@@ -407,7 +411,7 @@ class XspecPha():
 		for i in range(len(self.fluxbands)):
 			emin = self.fluxbands[i][0]
 			emax = self.fluxbands[i][1]
-			flux, flux_error_min, flux_error_max = self.get_flux(self.fxcm_fit,emin,emax)
+			flux, flux_error_min, flux_error_max = self.get_flux(self.fxcm_fit,emin,emax,self.freeze_params)
 			self.fluxlist.append([flux, flux_error_min, flux_error_max])
 
 			keyword = "flux_%sto%skeV" % (str(emin).replace('.','p'),str(emax).replace('.','p'))
@@ -638,7 +642,8 @@ class MonitoringManager():
 				ploty2min=dataset['ploty2min'],ploty2max=dataset['ploty2max'],
 				ratebands=self.param['ratebands'],
 				fluxbands=self.param['fluxbands'],
-				parerrnum=self.param['parerrnum'])
+				parerrnum=self.param['parerrnum'],
+				freeze_params=self.param['freeze_params'])
 			xspec_pha.run()			
 			#try:				
 			#	xspec_pha.run()
